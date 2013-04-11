@@ -1,4 +1,4 @@
-module CRC (crc, testCRC) where
+module File.Binary.CRC (crc, testCRC) where
 
 import Data.Array
 import Data.Bits
