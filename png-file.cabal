@@ -3,7 +3,7 @@ cabal-version:	>= 1.8
 
 name:		png-file
 version:	0.0.1
-stability:	experimental
+stability:	Experimental
 author:		Yoshikuni Jujo <PAF01143@nifty.ne.jp>
 maintainer:	Yoshikuni Jujo <PAF01143@nifty.ne.jp>
 homepage:	https://skami.iocikun.jp/haskell/packages/png-file
