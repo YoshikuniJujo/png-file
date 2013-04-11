@@ -1,0 +1,24 @@
+2013.04.11 Thu.
+
+data PNGParams = PNGParams {
+	pngWidth :: Int,
+	pngHeight :: Int,
+	pngColorDepth :: Int,
+	pngHasAlpha :: Bool,
+	pngHasColor :: Bool,
+	pngHasPallet :: Bool
+ }
+
+後々の拡張のため、PNGParams は公開しない。
+setPNGWidth ... と pngWidth ... とを公開することにする。
+つまり、setter と getter だ。
+
+class PNGImage pi where
+	type PNGColor pi
+	type PNGColors pi
+	bsToPNGImage :: PNGParams -> Lazy.ByteString -> pi
+	pngImageToBs :: pi -> Lazy.ByteString
+	setPixel :: Int -> Int -> pi -> pi
+	getPixel :: Int -> Int -> pi -> PNGColor pi
+	colorsToPNGImage :: PNGParams -> PNGColors pi -> pi
+	pngImageToColors :: pi -> PNGColors
