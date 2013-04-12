@@ -3,7 +3,10 @@
 
 import File.Binary.PNG
 
+import Prelude hiding (concat)
 import System.Environment (getArgs)
+import qualified Data.ByteString.Lazy as BSL
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 --------------------------------------------------------------------------------
 
@@ -19,7 +22,7 @@ main = do
 	putStrLn ""
 	putStrLn $ take 1000 (show new) ++ "..."
 
-	putStrLn $ unwords $ map chunkName $ others p
+	BSLC.putStrLn $ BSL.intercalate " " $ map chunkName $ others p
 
 {-
 ihdr :: IHDR

@@ -22,3 +22,8 @@ class PNGImage pi where
 	getPixel :: Int -> Int -> pi -> PNGColor pi
 	colorsToPNGImage :: PNGParams -> PNGColors pi -> pi
 	pngImageToColors :: pi -> PNGColors
+
+2013.04.12 Fri.
+
+とりあえず、読み込み、書き込みの際の CRC の自動チェック、自動変換はできるようにした。
+しかし、ChunkBody が二重化されてしまっているのがあまり美しくないな

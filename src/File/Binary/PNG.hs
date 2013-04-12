@@ -1,4 +1,9 @@
-{-# LANGUAGE QuasiQuotes, TypeFamilies, FlexibleInstances, OverloadedStrings #-}
+{-# LANGUAGE
+	QuasiQuotes,
+	TypeFamilies,
+	FlexibleInstances,
+	OverloadedStrings,
+	ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module File.Binary.PNG(
@@ -24,14 +29,13 @@ import Prelude hiding (concat)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
-import File.Binary.CRC (crc)
+import File.Binary.CRC (crcb, checkCRC)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
 import qualified Data.ByteString as BS (ByteString, length, readFile, writeFile)
-import qualified Data.ByteString.Char8 as BSC (unpack)
-import Data.ByteString.Lazy
-	(ByteString, pack, unpack, concat, toChunks, fromChunks)
+import Data.ByteString.Lazy as BSL
+	(ByteString, pack, unpack, concat, toChunks, fromChunks, append)
 import Data.Word (Word8, Word32)
 import Data.Bits (Bits, (.&.), (.|.), shiftL, shiftR)
 import Data.Monoid (mconcat)
@@ -43,7 +47,7 @@ import Control.Arrow(first)
 
 readPNG :: FilePath -> IO PNG
 readPNG fp = do
-	(p, "") <- fromBinary () <$> BS.readFile fp
+	Right (p, "") <- fromBinary () <$> BS.readFile fp
 	return p
 
 writePNG :: FilePath -> PNG -> IO ()
@@ -75,25 +79,25 @@ png i bp (Just p) bi b ap o =
 png i bp Nothing bi b ap o =
 	PNG { chunks = makeIHDR i : bp ++ bi ++ mkBody b ++ o ++ ap ++ [iend] }
 
-beforePLTEs :: [String]
+beforePLTEs :: [ByteString]
 beforePLTEs = ["cHRM", "gAMA", "sBIT", "sRGB", "iCCP"]
 
 bplte :: PNG -> [Chunk]
 bplte = filter ((`elem` beforePLTEs) . chunkName) . chunks
 
-beforeIDATs :: [String]
+beforeIDATs :: [ByteString]
 beforeIDATs = ["bKGD", "hIST", "tRNS", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL"]
 
 bidat :: PNG -> [Chunk]
 bidat = filter ((`elem` beforeIDATs) . chunkName) . chunks
 
-anyplaces :: [String]
+anyplaces :: [ByteString]
 anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
 
 aplace :: PNG -> [Chunk]
 aplace = filter ((`elem` anyplaces) . chunkName) . chunks
 
-needs :: [String]
+needs :: [ByteString]
 needs = ["IHDR", "PLTE", "IDAT", "IEND"]
 
 others :: PNG -> [Chunk]
@@ -112,7 +116,7 @@ makeIDAT bs = Chunk {
 	chunkSize = fromIntegral $ BS.length bs,
 	chunkName = "IDAT",
 	chunkData = ChunkIDAT $ IDAT $ fromChunks [bs],
-	chunkCRC = crc $ "IDAT" ++ BSC.unpack bs }
+	chunkCRC = CRC }
 
 makeIHDR :: IHDR -> Chunk
 makeIHDR = makeChunk . ChunkIHDR
@@ -125,7 +129,7 @@ size (ChunkIHDR _) = 13
 size (ChunkPLTE (PLTE d)) = 3 * length d
 size _ = error "yet"
 
-name :: ChunkBody -> String
+name :: ChunkBody -> ByteString
 name (ChunkIHDR _) = "IHDR"
 name (ChunkPLTE _) = "PLTE"
 name _ = error "yet"
@@ -135,14 +139,15 @@ makeChunk cb = Chunk {
 	chunkSize = length (toBinary (size cb, name cb) cb :: String),
 	chunkName = name cb,
 	chunkData = cb,
-	chunkCRC = crc $ name cb ++ toBinary (size cb, name cb) cb }
+--	chunkCRC = CRC "" } -- crcb $ name cb `append` toBinary (size cb, name cb) cb }
+	chunkCRC = CRC }
 
 iend :: Chunk
 iend = Chunk {
 	chunkSize = 0,
 	chunkName = "IEND",
 	chunkData = ChunkIEND IEND,
-	chunkCRC = crc "IEND" }
+	chunkCRC = CRC } -- crcb "IEND" }
 
 [binary|
 
@@ -162,16 +167,28 @@ PNG deriving Show
 Chunk deriving Show
 
 4: chunkSize
-((), Just 4){String}: chunkName
+4{ByteString}: chunkName
 (chunkSize, chunkName){ChunkBody}: chunkData
-4{Word32}:chunkCRC
+(chunkName, chunkData, (chunkSize, chunkName)){CRC}: chunkCRC
 
 |]
+
+data CRC = CRC deriving Show
+
+instance Field CRC where
+	type FieldArgument CRC = (ByteString, ChunkBody, (Int, ByteString))
+	fromBinary (nam, bod, arg) b =
+		if checkCRC (nam `append` toBinary arg bod) bs
+			then return (CRC, rest)
+			else fail "bad crc"b
+		where
+		(bs, rest) = getBytes 4 b
+	toBinary (nam, bod, arg) _ = makeBinary $ crcb $ nam `append` toBinary arg bod
 
 instance Field Word32 where
 	type FieldArgument Word32 = Int
 	toBinary n = makeBinary . pack . intToWords n
-	fromBinary n = first (wordsToInt . unpack) . getBytes n
+	fromBinary n = return . first (wordsToInt . unpack) . getBytes n
 
 intToWords :: (Bits i, Integral i) => Int -> i -> [Word8]
 intToWords = itw []
@@ -196,7 +213,7 @@ data ChunkBody
 	deriving Show
 
 instance Field ChunkBody where
-	type FieldArgument ChunkBody = (Int, String)
+	type FieldArgument ChunkBody = (Int, ByteString)
 	toBinary _ (ChunkIHDR c) = toBinary () c
 	toBinary _ (ChunkGAMA c) = toBinary () c
 	toBinary _ (ChunkSRGB c) = toBinary () c
@@ -207,16 +224,16 @@ instance Field ChunkBody where
 	toBinary (n, _) (ChunkTEXT c) = toBinary n c
 	toBinary _ (ChunkIEND c) = toBinary () c
 	toBinary (n, _) (Others str) = toBinary ((), Just n) str
-	fromBinary (_, "IHDR") = first ChunkIHDR . fromBinary ()
-	fromBinary (_, "gAMA") = first ChunkGAMA . fromBinary ()
-	fromBinary (_, "sRGB") = first ChunkSRGB . fromBinary ()
-	fromBinary (n, "cHRM") = first ChunkCHRM . fromBinary n
-	fromBinary (n, "PLTE") = first ChunkPLTE . fromBinary n
-	fromBinary (_, "bKGD") = first ChunkBKGD . fromBinary ()
-	fromBinary (n, "IDAT") = first ChunkIDAT . fromBinary n
-	fromBinary (n, "tEXt") = first ChunkTEXT . fromBinary n
-	fromBinary (_, "IEND") = first ChunkIEND . fromBinary ()
-	fromBinary (n, _) = first Others . fromBinary ((), Just n)
+	fromBinary (_, "IHDR") = fmap (first ChunkIHDR) . fromBinary ()
+	fromBinary (_, "gAMA") = fmap (first ChunkGAMA) . fromBinary ()
+	fromBinary (_, "sRGB") = fmap (first ChunkSRGB) . fromBinary ()
+	fromBinary (n, "cHRM") = fmap (first ChunkCHRM) . fromBinary n
+	fromBinary (n, "PLTE") = fmap (first ChunkPLTE) . fromBinary n
+	fromBinary (_, "bKGD") = fmap (first ChunkBKGD) . fromBinary ()
+	fromBinary (n, "IDAT") = fmap (first ChunkIDAT) . fromBinary n
+	fromBinary (n, "tEXt") = fmap (first ChunkTEXT) . fromBinary n
+	fromBinary (_, "IEND") = fmap (first ChunkIEND) . fromBinary ()
+	fromBinary (n, _) = fmap (first Others) . fromBinary ((), Just n)
 
 [binary|
 
@@ -280,11 +297,11 @@ arg :: Int
 instance Field (Int, Int, Int) where
 	type FieldArgument (Int, Int, Int) = ()
 	toBinary _ (b, g, r) = mconcat [toBinary 1 b, toBinary 1 g, toBinary 1 r]
-	fromBinary _ s = let
-		(r, rest) = fromBinary 1 s
-		(g, rest') = fromBinary 1 rest
-		(b, rest'') = fromBinary 1 rest' in
-		((r, g, b), rest'')
+	fromBinary _ s = do
+		(r, rest) <- fromBinary 1 s
+		(g, rest') <- fromBinary 1 rest
+		(b, rest'') <- fromBinary 1 rest'
+		return ((r, g, b), rest'')
 
 [binary|
 

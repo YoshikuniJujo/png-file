@@ -1,1 +1,5 @@
 1. CRC.hs の代わりに、hackage で使える package があるかどうか調べること
+2. CRC.hs は保存しない。確認だけして Left "error mesage" または return () とする
+3. chunk body は (ret, bytestring) のような感じに二重化する -> CRC チェックのため
+4. CRC の部分は data CRC とし argument を bytestring とする
+5. crc が lazy bytestring を取るようにする
