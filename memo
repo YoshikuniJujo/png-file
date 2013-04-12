@@ -27,3 +27,28 @@ class PNGImage pi where
 
 とりあえず、読み込み、書き込みの際の CRC の自動チェック、自動変換はできるようにした。
 しかし、ChunkBody が二重化されてしまっているのがあまり美しくないな
+
+上記は一応解決した。ただ、fromBinary と toBinary を同時に行っているところがあるけど。
+まあ、そこはとりあえずはいいとする。
+
+で、どんなふうにするかを昨日考えたわけだが、
+読み込んだ PNG data から変換していくこととした。
+
+最終的な形としては、
+
+PNGParams { width, height, etc, Maybe pallet, Maybe etc } というものを作る。
+また、class PNGImage を作りいくつかの method を追加する。
+IDAT より先に来る chunk の内容は PNGParams にまとめることとして、
+それ以外の Chunk は正式なものはそれぞれのスロットに入れ、
+そうでないものは others にまとめて ByteString の形で入れておこうかな。
+ここらへんを、もっと柔軟に、たとえば String も使えるようにする、
+とかもいいかもしれない。
+
+class Field pi => PNGImage pi where
+	type PNGColor pi
+	setPixel :: pi -> Int -> Int -> PNGColor pi -> pi
+	getPixel :: pi -> Int -> Int -> PNGColor pi
+	constructPNGImage :: pi -> PNGColor pi -> pi
+
+こんな感じかな。
+で、ByteString と [] を使った data をこれの instance としておこう。

@@ -8,6 +8,7 @@
 
 module File.Binary.PNG(
 	PNG,
+	chunks,
 	chunkName,
 
 	readPNG,
@@ -22,7 +23,8 @@ module File.Binary.PNG(
 	writePNG,
 	IHDR(..),
 	PLTE(..),
-	png
+	png,
+	otherChunks
 ) where
 
 import Prelude hiding (concat)
@@ -72,37 +74,41 @@ mkBody = map makeIDAT . toChunks . compressWith defaultCompressParams {
 		compressWindowBits = WindowBits 10
 	 }
 
-png :: IHDR -> [Chunk] -> Maybe PLTE -> [Chunk] -> ByteString -> [Chunk] -> [Chunk] -> PNG
-png i bp (Just p) bi b ap o =
-	PNG { chunks = makeIHDR i : bp ++ makePLTE p : bi ++ mkBody b ++ o ++
-		ap ++ [iend] }
-png i bp Nothing bi b ap o =
-	PNG { chunks = makeIHDR i : bp ++ bi ++ mkBody b ++ o ++ ap ++ [iend] }
+png :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> PNG
+png i (Just p) cs b =
+	PNG { chunks = makeIHDR i : bplte cs ++ makePLTE p : bidat cs ++
+		mkBody b ++ aplace cs ++ others cs ++ [iend] }
+png i Nothing cs b =
+	PNG { chunks = makeIHDR i : bplte cs ++ bidat cs ++
+		mkBody b ++ aplace cs ++ others cs ++ [iend] }
 
 beforePLTEs :: [ByteString]
 beforePLTEs = ["cHRM", "gAMA", "sBIT", "sRGB", "iCCP"]
 
-bplte :: PNG -> [Chunk]
-bplte = filter ((`elem` beforePLTEs) . chunkName) . chunks
+bplte :: [Chunk] -> [Chunk]
+bplte = filter ((`elem` beforePLTEs) . chunkName)
 
 beforeIDATs :: [ByteString]
 beforeIDATs = ["bKGD", "hIST", "tRNS", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL"]
 
-bidat :: PNG -> [Chunk]
-bidat = filter ((`elem` beforeIDATs) . chunkName) . chunks
+bidat :: [Chunk] -> [Chunk]
+bidat = filter ((`elem` beforeIDATs) . chunkName)
 
 anyplaces :: [ByteString]
 anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
 
-aplace :: PNG -> [Chunk]
-aplace = filter ((`elem` anyplaces) . chunkName) . chunks
+aplace :: [Chunk] -> [Chunk]
+aplace = filter ((`elem` anyplaces) . chunkName)
 
 needs :: [ByteString]
 needs = ["IHDR", "PLTE", "IDAT", "IEND"]
 
-others :: PNG -> [Chunk]
-others PNG { chunks = cs } =
-	filter ((`notElem` needs ++ beforePLTEs ++ beforeIDATs ++ anyplaces) . chunkName) cs
+otherChunks :: PNG -> [Chunk]
+otherChunks = filter ((`notElem` needs) . chunkName) . chunks
+
+others :: [Chunk] -> [Chunk]
+others = filter $
+	(`notElem` needs ++ beforePLTEs ++ beforeIDATs ++ anyplaces) . chunkName
 
 body' :: PNG -> [IDAT]
 body' PNG { chunks = cs } =

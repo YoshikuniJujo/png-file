@@ -14,15 +14,16 @@ main :: IO ()
 main = do
 	[fin, fout] <- getArgs
 	p <- readPNG fin
+	let c = chunks p
 	putStrLn $ take 1000 (show p) ++ "..."
 
-	let new = png (ihdr p) (bplte p) (plte p) (bidat p) (body p) (aplace p) (others p)
+	let new = png (ihdr p) (plte p) (otherChunks p) (body p)
 
 	writePNG fout new
 	putStrLn ""
 	putStrLn $ take 1000 (show new) ++ "..."
 
-	BSLC.putStrLn $ BSL.intercalate " " $ map chunkName $ others p
+	BSLC.putStrLn $ BSL.intercalate " " $ map chunkName $ others c
 
 {-
 ihdr :: IHDR
