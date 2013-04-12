@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module File.Binary.CRC (crcb, checkCRC, testCRC) where
+module File.Binary.PNG.CRC (crcb, checkCRC, testCRC, crcl) where
 
 import Data.Array
 import Data.Bits
