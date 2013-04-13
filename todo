@@ -1,5 +1,14 @@
 1. CRC.hs の代わりに、hackage で使える package があるかどうか調べること
-2. CRC.hs は保存しない。確認だけして Left "error mesage" または return () とする
-3. chunk body は (ret, bytestring) のような感じに二重化する -> CRC チェックのため
-4. CRC の部分は data CRC とし argument を bytestring とする
-5. crc が lazy bytestring を取るようにする
+2. chunk body は (ret, bytestring) のような感じに二重化する -> CRC チェックのため
+3. 上の 2 は結局やめにした。その代わりに、toBinary と fromBinary をしている
+	これはあまり効率的ではない
+	fromBinary に限れば、binary を引数とすることは可能だが、
+	toBinary に同じ引数を使う仕様となっているため問題がある
+	ここらへんを解決するきれいな方法があれば良いと思う
+	ひとつには、fromBinary と toBinary の引数を何らかの方法で変える
+	ということがある
+	あとで考えること
+4. 今のところ、[Chunk] <-> Binary ができるようになった
+	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
+	今の PNG は Chunks とかの名前に変えようかな
+	この本来の PNG は Header と Image と Values を持てば良いだろう

@@ -12,14 +12,21 @@ main :: IO ()
 main = do
 	[fin, fout] <- getArgs
 	cnt <- readBinaryFile fin
+
 	let Right chs = readPNG cnt
-	putStrLn $ take 1000 (show chs) ++ "..."
+	putStrLn $ take 700 (show chs) ++ "..."
 
-	let new = png (ihdr chs) (plte chs) (otherChunks chs) (body chs)
+	let	i = ihdr chs
+		p = plte chs
+		o = otherChunks chs
+		b = body chs
+		new = png i p o b
 
-	writePNG fout new
+	let binary = writePNG new
+	writeBinaryFile fout binary
+
 	putStrLn ""
-	putStrLn $ take 1000 (show new) ++ "..."
+	putStrLn $ take 700 (show new) ++ "..."
 
 {-
 ihdr :: IHDR

@@ -7,32 +7,23 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module File.Binary.PNG.RW (
-	PNG,
-	chunks,
-	chunkData,
-	chunkName,
-
 	readBinaryFile,
+	writeBinaryFile,
 
 	readPNG,
-	ihdr,
-	bplte,
-	plte,
-	bidat,
-	body,
-	aplace,
-	others,
-
 	writePNG,
-	writePNG',
-	IHDR(..),
-	PLTE(..),
+
 	png,
-	otherChunks
+	ihdr,
+	plte,
+	body,
+	otherChunks,
+
+--	IHDR(..),
+--	PLTE(..),
 ) where
 
-import Prelude hiding (concat)
-import File.Binary (binary, Field(..), Binary(..), readBinaryFile)
+import File.Binary (binary, Field(..), Binary(..), readBinaryFile, writeBinaryFile)
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.Chunks
@@ -40,55 +31,19 @@ import File.Binary.PNG.CRC (crcb, checkCRC)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
-import qualified Data.ByteString as BS (ByteString, length, writeFile)
+import qualified Data.ByteString as BS (ByteString)
 import Data.ByteString.Lazy as BSL
-	(ByteString, pack, unpack, concat, toChunks, fromChunks, append)
+	(ByteString, pack, unpack, toChunks, fromChunks, append)
 import Data.Word (Word8, Word32)
 import Data.Bits (Bits, (.&.), (.|.), shiftL, shiftR)
 import Data.Monoid (mempty)
-import Data.List (find)
 import Control.Monad (unless)
 import Control.Arrow(first)
 
 --------------------------------------------------------------------------------
 
-ihdr :: [Chunk] -> IHDR
-ihdr = (\(ChunkIHDR i) -> i) . head . filter isIHDR
-
-bplte :: [ChunkStructure] -> [ChunkStructure]
-bplte = filter ((`elem` beforePLTEs) . chunkName)
-
-plte :: [Chunk] -> Maybe PLTE
-plte c = do
-	ChunkPLTE pl <- find isPLTE c
-	return pl
-
-bidat :: [ChunkStructure] -> [ChunkStructure]
-bidat = filter ((`elem` beforeIDATs) . chunkName)
-
 body :: [Chunk] -> ByteString
-body = decompress . concatIDATs . body'
-
-aplace :: [ChunkStructure] -> [ChunkStructure]
-aplace = filter ((`elem` anyplaces) . chunkName)
-
-others :: [ChunkStructure] -> [ChunkStructure]
-others = filter $
-	(`notElem` needs ++ beforePLTEs ++ beforeIDATs ++ anyplaces) . chunkName
-
-needs :: [ByteString]
-needs = ["IHDR", "PLTE", "IDAT", "IEND"]
-
-beforePLTEs :: [ByteString]
-beforePLTEs = ["cHRM", "gAMA", "sBIT", "sRGB", "iCCP"]
-
--- elemChunks :: [ByteString] -> [
-
-beforeIDATs :: [ByteString]
-beforeIDATs = ["bKGD", "hIST", "tRNS", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL"]
-
-anyplaces :: [ByteString]
-anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
+body = decompress . idats
 
 otherChunks :: [Chunk] -> [Chunk]
 otherChunks = filter (not . isNeed)
@@ -99,31 +54,20 @@ readPNG b = do
 	unless (rest == mempty) $ fail "can't read whole binary"
 	return $ map chunkData $ chunks p
 
-writePNG' :: Binary b => [Chunk] -> b
-writePNG' = toBinary () . PNG . map cToC
+writePNG :: Binary b => [Chunk] -> b
+writePNG = toBinary () . PNG . map cToC
 
-writePNG :: FilePath -> PNG -> IO ()
-writePNG fout = BS.writeFile fout . toBinary ()
-
-mkBody :: ByteString -> [ChunkStructure]
-mkBody = map makeIDAT . toChunks . compressWith defaultCompressParams {
+mkBody :: ByteString -> [Chunk]
+mkBody = map (mkIDAT) . toChunks . compressWith defaultCompressParams {
 		compressLevel = bestCompression,
 		compressWindowBits = WindowBits 10
 	 }
 
-{-
-makeChunks :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> [Chunk]
-makeChunks i (Just p) cs b =
-	ChunkIHDR i :  ChunkPLTE p : cs 
--}
-
-png :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> PNG
-png i (Just p) cs_ b = let cs = map cToC cs_ in
-	PNG { chunks = makeIHDR i : bplte cs ++ makePLTE p : bidat cs ++
-		mkBody b ++ aplace cs ++ others cs ++ [iend] }
-png i Nothing cs_ b = let cs = map cToC cs_ in
-	PNG { chunks = makeIHDR i : bplte cs ++ bidat cs ++
-		mkBody b ++ aplace cs ++ others cs ++ [iend] }
+png :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> [Chunk]
+png i (Just p) cs_ b = ChunkIHDR i : bplte cs_ ++ ChunkPLTE p : bidat cs_ ++
+	mkBody b ++ aplace cs_ ++ others cs_ ++ [ChunkIEND IEND]
+png i Nothing cs_ b = ChunkIHDR i : bplte cs_ ++ bidat cs_ ++
+	mkBody b ++ aplace cs_ ++ others cs_ ++ [ChunkIEND IEND]
 
 cToC :: Chunk -> ChunkStructure
 cToC = makeChunk
@@ -134,12 +78,6 @@ makeChunk cb = ChunkStructure {
 	chunkName = name cb,
 	chunkData = cb,
 	chunkCRC = CRC }
-
-body' :: [Chunk] -> [IDAT]
-body' cs = map cidat $ filter isIDAT cs
-
-concatIDATs :: [IDAT] -> ByteString
-concatIDATs = concat . map idat
 
 isIDAT :: Chunk -> Bool
 isIDAT ChunkIDAT {} = True
@@ -160,30 +98,14 @@ isIEND _ = False
 isNeed :: Chunk -> Bool
 isNeed c = or [isIDAT c, isIHDR c, isPLTE c, isIEND c]
 
-makeIDAT :: BS.ByteString -> ChunkStructure
-makeIDAT bs = ChunkStructure {
-	chunkSize = fromIntegral $ BS.length bs,
-	chunkName = "IDAT",
-	chunkData = ChunkIDAT $ IDAT $ fromChunks [bs],
-	chunkCRC = CRC }
-
-makeIHDR :: IHDR -> ChunkStructure
-makeIHDR = makeChunk . ChunkIHDR
-
-makePLTE :: PLTE -> ChunkStructure
-makePLTE = makeChunk . ChunkPLTE
+mkIDAT :: BS.ByteString -> Chunk
+mkIDAT = ChunkIDAT . IDAT . fromChunks . (: [])
 
 size :: Chunk -> Int
 size (ChunkIHDR _) = 13
 size (ChunkPLTE (PLTE d)) = 3 * length d
-size _ = error "yet"
-
-iend :: ChunkStructure
-iend = ChunkStructure {
-	chunkSize = 0,
-	chunkName = "IEND",
-	chunkData = ChunkIEND IEND,
-	chunkCRC = CRC } -- crcb "IEND" }
+size (ChunkIEND _) = 0
+size _ = error "size: yet"
 
 [binary|
 
