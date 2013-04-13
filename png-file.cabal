@@ -29,6 +29,9 @@ source-repository	this
 library
     hs-source-dirs:	src
     exposed-modules:	File.Binary.PNG
-    other-modules:	File.Binary.PNG.CRC, File.Binary.PNG.RW
+    other-modules:
+        File.Binary.PNG.CRC,
+        File.Binary.PNG.RW,
+        File.Binary.PNG.Chunks
     build-depends:	base > 3 && < 5, binary-file, bytestring, zlib, array
     ghc-options:	-Wall

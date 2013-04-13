@@ -9,7 +9,10 @@
 module File.Binary.PNG.RW (
 	PNG,
 	chunks,
+	chunkData,
 	chunkName,
+
+	readBinaryFile,
 
 	readPNG,
 	ihdr,
@@ -21,6 +24,7 @@ module File.Binary.PNG.RW (
 	others,
 
 	writePNG,
+	writePNG',
 	IHDR(..),
 	PLTE(..),
 	png,
@@ -28,128 +32,154 @@ module File.Binary.PNG.RW (
 ) where
 
 import Prelude hiding (concat)
-import File.Binary (binary, Field(..), Binary(..))
+import File.Binary (binary, Field(..), Binary(..), readBinaryFile)
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
+import File.Binary.PNG.Chunks
 import File.Binary.PNG.CRC (crcb, checkCRC)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
-import qualified Data.ByteString as BS (ByteString, length, readFile, writeFile)
+import qualified Data.ByteString as BS (ByteString, length, writeFile)
 import Data.ByteString.Lazy as BSL
 	(ByteString, pack, unpack, concat, toChunks, fromChunks, append)
 import Data.Word (Word8, Word32)
 import Data.Bits (Bits, (.&.), (.|.), shiftL, shiftR)
-import Data.Monoid (mconcat)
+import Data.Monoid (mempty)
 import Data.List (find)
-import Control.Applicative ((<$>))
+import Control.Monad (unless)
 import Control.Arrow(first)
 
 --------------------------------------------------------------------------------
 
-readPNG :: FilePath -> IO PNG
-readPNG fp = do
-	Right (p, "") <- fromBinary () <$> BS.readFile fp
-	return p
+ihdr :: [Chunk] -> IHDR
+ihdr = (\(ChunkIHDR i) -> i) . head . filter isIHDR
+
+bplte :: [ChunkStructure] -> [ChunkStructure]
+bplte = filter ((`elem` beforePLTEs) . chunkName)
+
+plte :: [Chunk] -> Maybe PLTE
+plte c = do
+	ChunkPLTE pl <- find isPLTE c
+	return pl
+
+bidat :: [ChunkStructure] -> [ChunkStructure]
+bidat = filter ((`elem` beforeIDATs) . chunkName)
+
+body :: [Chunk] -> ByteString
+body = decompress . concatIDATs . body'
+
+aplace :: [ChunkStructure] -> [ChunkStructure]
+aplace = filter ((`elem` anyplaces) . chunkName)
+
+others :: [ChunkStructure] -> [ChunkStructure]
+others = filter $
+	(`notElem` needs ++ beforePLTEs ++ beforeIDATs ++ anyplaces) . chunkName
+
+needs :: [ByteString]
+needs = ["IHDR", "PLTE", "IDAT", "IEND"]
+
+beforePLTEs :: [ByteString]
+beforePLTEs = ["cHRM", "gAMA", "sBIT", "sRGB", "iCCP"]
+
+-- elemChunks :: [ByteString] -> [
+
+beforeIDATs :: [ByteString]
+beforeIDATs = ["bKGD", "hIST", "tRNS", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL"]
+
+anyplaces :: [ByteString]
+anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
+
+otherChunks :: [Chunk] -> [Chunk]
+otherChunks = filter (not . isNeed)
+
+readPNG :: Binary b => b -> Either String [Chunk]
+readPNG b = do
+	(p, rest) <- fromBinary () b
+	unless (rest == mempty) $ fail "can't read whole binary"
+	return $ map chunkData $ chunks p
+
+writePNG' :: Binary b => [Chunk] -> b
+writePNG' = toBinary () . PNG . map cToC
 
 writePNG :: FilePath -> PNG -> IO ()
 writePNG fout = BS.writeFile fout . toBinary ()
 
-body :: PNG -> ByteString
-body = decompress . concatIDATs . body'
-
-ihdr :: PNG -> IHDR
-ihdr p = let
-	ChunkIHDR i = chunkData . head . filter ((== "IHDR") . chunkName) $ chunks p
-	in i
-
-plte :: PNG -> Maybe PLTE
-plte p = do
-	ChunkPLTE pl <- chunkData <$> find ((== "PLTE") . chunkName) (chunks p)
-	return pl
-
-mkBody :: ByteString -> [Chunk]
+mkBody :: ByteString -> [ChunkStructure]
 mkBody = map makeIDAT . toChunks . compressWith defaultCompressParams {
 		compressLevel = bestCompression,
 		compressWindowBits = WindowBits 10
 	 }
 
+{-
+makeChunks :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> [Chunk]
+makeChunks i (Just p) cs b =
+	ChunkIHDR i :  ChunkPLTE p : cs 
+-}
+
 png :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> PNG
-png i (Just p) cs b =
+png i (Just p) cs_ b = let cs = map cToC cs_ in
 	PNG { chunks = makeIHDR i : bplte cs ++ makePLTE p : bidat cs ++
 		mkBody b ++ aplace cs ++ others cs ++ [iend] }
-png i Nothing cs b =
+png i Nothing cs_ b = let cs = map cToC cs_ in
 	PNG { chunks = makeIHDR i : bplte cs ++ bidat cs ++
 		mkBody b ++ aplace cs ++ others cs ++ [iend] }
 
-beforePLTEs :: [ByteString]
-beforePLTEs = ["cHRM", "gAMA", "sBIT", "sRGB", "iCCP"]
+cToC :: Chunk -> ChunkStructure
+cToC = makeChunk
 
-bplte :: [Chunk] -> [Chunk]
-bplte = filter ((`elem` beforePLTEs) . chunkName)
+makeChunk :: Chunk -> ChunkStructure
+makeChunk cb = ChunkStructure {
+	chunkSize = length (toBinary (size cb, name cb) cb :: String),
+	chunkName = name cb,
+	chunkData = cb,
+	chunkCRC = CRC }
 
-beforeIDATs :: [ByteString]
-beforeIDATs = ["bKGD", "hIST", "tRNS", "pHYs", "sPLT", "oFFs", "pCAL", "sCAL"]
-
-bidat :: [Chunk] -> [Chunk]
-bidat = filter ((`elem` beforeIDATs) . chunkName)
-
-anyplaces :: [ByteString]
-anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
-
-aplace :: [Chunk] -> [Chunk]
-aplace = filter ((`elem` anyplaces) . chunkName)
-
-needs :: [ByteString]
-needs = ["IHDR", "PLTE", "IDAT", "IEND"]
-
-otherChunks :: PNG -> [Chunk]
-otherChunks = filter ((`notElem` needs) . chunkName) . chunks
-
-others :: [Chunk] -> [Chunk]
-others = filter $
-	(`notElem` needs ++ beforePLTEs ++ beforeIDATs ++ anyplaces) . chunkName
-
-body' :: PNG -> [IDAT]
-body' PNG { chunks = cs } =
-	map (cidat . chunkData) $ filter ((== "IDAT") . chunkName) cs
+body' :: [Chunk] -> [IDAT]
+body' cs = map cidat $ filter isIDAT cs
 
 concatIDATs :: [IDAT] -> ByteString
 concatIDATs = concat . map idat
 
-makeIDAT :: BS.ByteString -> Chunk
-makeIDAT bs = Chunk {
+isIDAT :: Chunk -> Bool
+isIDAT ChunkIDAT {} = True
+isIDAT _ = False
+
+isIHDR :: Chunk -> Bool
+isIHDR ChunkIHDR {} = True
+isIHDR _ = False
+
+isPLTE :: Chunk -> Bool
+isPLTE ChunkPLTE {} = True
+isPLTE _ = False
+
+isIEND :: Chunk -> Bool
+isIEND ChunkIEND {} = True
+isIEND _ = False
+
+isNeed :: Chunk -> Bool
+isNeed c = or [isIDAT c, isIHDR c, isPLTE c, isIEND c]
+
+makeIDAT :: BS.ByteString -> ChunkStructure
+makeIDAT bs = ChunkStructure {
 	chunkSize = fromIntegral $ BS.length bs,
 	chunkName = "IDAT",
 	chunkData = ChunkIDAT $ IDAT $ fromChunks [bs],
 	chunkCRC = CRC }
 
-makeIHDR :: IHDR -> Chunk
+makeIHDR :: IHDR -> ChunkStructure
 makeIHDR = makeChunk . ChunkIHDR
 
-makePLTE :: PLTE -> Chunk
+makePLTE :: PLTE -> ChunkStructure
 makePLTE = makeChunk . ChunkPLTE
 
-size :: ChunkBody -> Int
+size :: Chunk -> Int
 size (ChunkIHDR _) = 13
 size (ChunkPLTE (PLTE d)) = 3 * length d
 size _ = error "yet"
 
-name :: ChunkBody -> ByteString
-name (ChunkIHDR _) = "IHDR"
-name (ChunkPLTE _) = "PLTE"
-name _ = error "yet"
-
-makeChunk :: ChunkBody -> Chunk
-makeChunk cb = Chunk {
-	chunkSize = length (toBinary (size cb, name cb) cb :: String),
-	chunkName = name cb,
-	chunkData = cb,
---	chunkCRC = CRC "" } -- crcb $ name cb `append` toBinary (size cb, name cb) cb }
-	chunkCRC = CRC }
-
-iend :: Chunk
-iend = Chunk {
+iend :: ChunkStructure
+iend = ChunkStructure {
 	chunkSize = 0,
 	chunkName = "IEND",
 	chunkData = ChunkIEND IEND,
@@ -164,17 +194,17 @@ PNG deriving Show
 2: "\r\n"
 1: "\SUB"
 1: "\n"
-((), Nothing){[Chunk]}: chunks
+((), Nothing){[ChunkStructure]}: chunks
 
 |]
 
 [binary|
 
-Chunk deriving Show
+ChunkStructure deriving Show
 
 4: chunkSize
 4{ByteString}: chunkName
-(chunkSize, chunkName){ChunkBody}: chunkData
+(chunkSize, chunkName){Chunk}: chunkData
 (chunkName, chunkData, (chunkSize, chunkName)){CRC}: chunkCRC
 
 |]
@@ -182,7 +212,7 @@ Chunk deriving Show
 data CRC = CRC deriving Show
 
 instance Field CRC where
-	type FieldArgument CRC = (ByteString, ChunkBody, (Int, ByteString))
+	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
 	fromBinary (nam, bod, arg) b =
 		if checkCRC (nam `append` toBinary arg bod) bs
 			then return (CRC, rest)
@@ -205,21 +235,8 @@ intToWords = itw []
 wordsToInt :: Bits i => [Word8] -> i
 wordsToInt = foldl (\r w -> r `shiftL` 8 .|. fromIntegral w) 0
 
-data ChunkBody
-	= ChunkIHDR IHDR
-	| ChunkGAMA GAMA
-	| ChunkSRGB SRGB
-	| ChunkCHRM CHRM
-	| ChunkPLTE PLTE
-	| ChunkBKGD BKGD
-	| ChunkIDAT { cidat :: IDAT }
-	| ChunkTEXT TEXT
-	| ChunkIEND IEND
-	| Others String
-	deriving Show
-
-instance Field ChunkBody where
-	type FieldArgument ChunkBody = (Int, ByteString)
+instance Field Chunk where
+	type FieldArgument Chunk = (Int, ByteString)
 	toBinary _ (ChunkIHDR c) = toBinary () c
 	toBinary _ (ChunkGAMA c) = toBinary () c
 	toBinary _ (ChunkSRGB c) = toBinary () c
@@ -229,7 +246,7 @@ instance Field ChunkBody where
 	toBinary (n, _) (ChunkIDAT c) = toBinary n c
 	toBinary (n, _) (ChunkTEXT c) = toBinary n c
 	toBinary _ (ChunkIEND c) = toBinary () c
-	toBinary (n, _) (Others str) = toBinary ((), Just n) str
+	toBinary (n, _) (Others _ str) = toBinary n str
 	fromBinary (_, "IHDR") = fmap (first ChunkIHDR) . fromBinary ()
 	fromBinary (_, "gAMA") = fmap (first ChunkGAMA) . fromBinary ()
 	fromBinary (_, "sRGB") = fmap (first ChunkSRGB) . fromBinary ()
@@ -239,102 +256,4 @@ instance Field ChunkBody where
 	fromBinary (n, "IDAT") = fmap (first ChunkIDAT) . fromBinary n
 	fromBinary (n, "tEXt") = fmap (first ChunkTEXT) . fromBinary n
 	fromBinary (_, "IEND") = fmap (first ChunkIEND) . fromBinary ()
-	fromBinary (n, _) = fmap (first Others) . fromBinary ((), Just n)
-
-[binary|
-
-IHDR deriving Show
-
-4: width
-4: height
-1: depth
-: False
-: False
-: False
-: False
-: False
-{Bool}: alpha
-{Bool}: color
-{Bool}: palet
-1: compressionType
-1: filterType
-1: interlaceType
-
-|]
-
-[binary|
-
-GAMA deriving Show
-
-4: gamma
-
-|]
-
-[binary|
-
-SRGB deriving Show
-
-1: srgb
-
-|]
-
-[binary|
-
-CHRM
-
-deriving Show
-
-arg :: Int
-
-(4, Just (arg `div` 4)){[Int]}: chrms
-
-|]
-
-[binary|
-
-PLTE deriving Show
-
-arg :: Int
-
-((), Just (arg `div` 3)){[(Int, Int, Int)]}: colors
-
-|]
-
-instance Field (Int, Int, Int) where
-	type FieldArgument (Int, Int, Int) = ()
-	toBinary _ (b, g, r) = mconcat [toBinary 1 b, toBinary 1 g, toBinary 1 r]
-	fromBinary _ s = do
-		(r, rest) <- fromBinary 1 s
-		(g, rest') <- fromBinary 1 rest
-		(b, rest'') <- fromBinary 1 rest'
-		return ((r, g, b), rest'')
-
-[binary|
-
-BKGD deriving Show
-
-1: bkgd
-
-|]
-
-[binary|
-
-IDAT deriving Show
-
-arg :: Int
-
-arg{ByteString}: idat
-
-|]
-
-[binary|
-
-TEXT deriving Show
-
-arg :: Int
-
-((), Just arg){String}: text
-
-|]
-
-[binary|IEND deriving Show|]
+	fromBinary (n, nam) = fmap (first $ Others nam) . fromBinary n

@@ -52,3 +52,7 @@ class Field pi => PNGImage pi where
 
 こんな感じかな。
 で、ByteString と [] を使った data をこれの instance としておこう。
+
+2013.04.13 Sat.
+
+Other chunk はその field に name が必要だ。

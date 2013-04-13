@@ -5,25 +5,21 @@ import File.Binary.PNG
 
 import Prelude hiding (concat)
 import System.Environment (getArgs)
-import qualified Data.ByteString.Lazy as BSL
-import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 --------------------------------------------------------------------------------
 
 main :: IO ()
 main = do
 	[fin, fout] <- getArgs
-	p <- readPNG fin
-	let c = chunks p
-	putStrLn $ take 1000 (show p) ++ "..."
+	cnt <- readBinaryFile fin
+	let Right chs = readPNG cnt
+	putStrLn $ take 1000 (show chs) ++ "..."
 
-	let new = png (ihdr p) (plte p) (otherChunks p) (body p)
+	let new = png (ihdr chs) (plte chs) (otherChunks chs) (body chs)
 
 	writePNG fout new
 	putStrLn ""
 	putStrLn $ take 1000 (show new) ++ "..."
-
-	BSLC.putStrLn $ BSL.intercalate " " $ map chunkName $ others c
 
 {-
 ihdr :: IHDR
