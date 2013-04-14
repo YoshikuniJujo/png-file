@@ -14,6 +14,8 @@ import Data.ByteString.Lazy
 
 IHDR deriving Show
 
+arg :: Int
+
 4: width
 4: height
 1: depth
@@ -35,6 +37,8 @@ IHDR deriving Show
 
 GAMA deriving Show
 
+arg :: Int
+
 4: gamma
 
 |]
@@ -43,15 +47,15 @@ GAMA deriving Show
 
 SRGB deriving Show
 
+arg :: Int
+
 1: srgb
 
 |]
 
 [binary|
 
-CHRM
-
-deriving Show
+CHRM deriving Show
 
 arg :: Int
 
@@ -82,6 +86,8 @@ instance Field (Int, Int, Int) where
 
 BKGD deriving Show
 
+arg :: Int
+
 1: bkgd
 
 |]
@@ -106,5 +112,5 @@ arg :: Int
 
 |]
 
-[binary|IEND deriving Show|]
+[binary|IEND deriving Show arg :: Int|]
 
