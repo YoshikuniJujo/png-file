@@ -36,12 +36,13 @@ typer con ot remove = do
 	ovar <- newName "ovar"
 	let	ns = map (\(NormalC n _) -> n) s
 		other = fromJust $ find (\(NormalC n _) -> n == ot) s
-		names = map (mkName . mkT_con remove) $ map nameBase $ filter (/= ot) ns
-		pairs = map (flip recP [] . mkName &&& conE . mkName . mkT_con remove) $
-			map nameBase $ filter (/= ot) ns
-		otherN = (\(NormalC on _) -> mkName $ mkT_con remove $ nameBase on) other
+		names = map (mkName . mkTCon remove . nameBase) $
+			filter (/= ot) ns
+		pairs = map ((flip recP [] . mkName &&& conE . mkName .
+				mkTCon remove) . nameBase) $ filter (/= ot) ns
+		otherN = (\(NormalC on _) -> mkName $ mkTCon remove $ nameBase on) other
 		otherT = (\(NormalC on oa) -> NormalC
-			(mkName $ mkT_con remove $ nameBase on) [head oa]) other
+			(mkName $ mkTCon remove $ nameBase on) [head oa]) other
 		otherP = (\(NormalC on _) -> conP on [varP ovar, wildP]) other
 		cons = map (return . flip NormalC []) names ++ [return otherT]
 		otherClause = clause [otherP]
@@ -56,12 +57,13 @@ typer con ot remove = do
 	sd <- sigD (mkName $ "type" ++ nameBase con) $
 		arrowT `appT` conT con `appT` conT (mkName $ "Type" ++ nameBase con)
 	dd <- dataD (cxt []) tcon [] cons [''Eq, ''Show]
-	fd <- funD (mkName $ "type" ++ nameBase con) $ (flip map pairs $ \(p, e) ->
-		clause [p] (normalB e) []) ++ [otherClause]
+	fd <- funD (mkName $ "type" ++ nameBase con) $
+		map ( \(p, e) -> clause [p] (normalB e) []) pairs ++
+			[otherClause]
 	return [sd, dd, fd]
 
-mkT_con :: String -> String -> String
-mkT_con remove = ("T_" ++) . removeStr remove
+mkTCon :: String -> String -> String
+mkTCon remove = ("T_" ++) . removeStr remove
 
 removeStr :: String -> String -> String
 removeStr remove str

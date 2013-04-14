@@ -58,7 +58,7 @@ writePNG :: Binary b => [Chunk] -> b
 writePNG = toBinary () . PNG . map cToC
 
 mkBody :: ByteString -> [Chunk]
-mkBody = map (mkIDAT) . toChunks . compressWith defaultCompressParams {
+mkBody = map mkIDAT . toChunks . compressWith defaultCompressParams {
 		compressLevel = bestCompression,
 		compressWindowBits = WindowBits 10
 	 }
