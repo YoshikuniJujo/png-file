@@ -31,17 +31,35 @@ import Data.ByteString.Lazy (ByteString, concat)
 import Data.Monoid
 import Data.List (find)
 
+import Language.Haskell.TH.Tools
+
 --------------------------------------------------------------------------------
 
 data Chunk
 	= ChunkIHDR IHDR
 	| ChunkCHRM CHRM
 	| ChunkGAMA GAMA
+--	| ChunkSBIT SBIT
 	| ChunkSRGB SRGB
+--	| ChunkICCP ICCP
 	| ChunkPLTE PLTE
 	| ChunkBKGD BKGD
+--	| ChunkHIST HIST
+--	| ChunkTRNS TRNS
+--	| ChunkPHYS PHYS
+--	| ChunkSPLT SPLT
+--	| ChunkOFFS OFFS
+--	| ChunkPCAL PCAL
+--	| ChunkSCAL SCAL
 	| ChunkIDAT { cidat :: IDAT }
+--	| ChunkTIME TIME
 	| ChunkTEXT TEXT
+--	| ChunkZTXT ZTXT
+--	| ChunkITXT ITXT
+--	| ChunkGIFG GIFG
+--	| ChunkGIFT GIFT
+--	| ChunkGIFX GIFX
+--	| ChunkFRAC FRAC
 	| ChunkIEND IEND
 	| Others ByteString ByteString
 	deriving Show
@@ -76,7 +94,6 @@ chunkType (Others "sPLT" _) = T_SPLT
 chunkType (Others "oFFs" _) = T_OFFS
 chunkType (Others "pCAL" _) = T_PCAL
 chunkType (Others "sCAL" _) = T_SCAL
--- anyplaces = ["tIME", "tEXt", "zTXt", "iTXt", "gIFg", "gIFt", "gIFx", "fRAc"]
 chunkType (Others "tIME" _) = T_TIME
 chunkType (Others "tEXt" _) = T_ZTXT
 chunkType (Others "iTXt" _) = T_ITXT
