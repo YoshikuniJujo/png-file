@@ -13,7 +13,7 @@ data Hoge
 	deriving Show
 
 -- typer ''Hoge (Hiding ['Da]) (AddType ["Da1", "Da2"])
-typer' ''Hoge 'Da
+typer ''Hoge 'Da ""
 
 main :: IO ()
 main = do

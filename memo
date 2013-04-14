@@ -56,3 +56,18 @@ class Field pi => PNGImage pi where
 2013.04.13 Sat.
 
 Other chunk はその field に name が必要だ。
+
+2013.04.14 Sun.
+
+名前とデータ構造を結びつける必要がある。
+[("IHDR", ChunkIHDR), ("gAMA", ChunkGAMA) ... ] 等が必要だ。
+逆もできなければならないわけだがそれはすこし難しいかな。
+もしかすると、T_IHDR 等は無駄かもしれない。
+何となくきれいな感じがするのだけど、
+別に String または ByteString で型を決めたっていいわけだし ...
+
+T_IHDR 等は使えるかもしれない。
+T_IHDR -> ChunkIHDR 等を自動生成してしまえば良いのでは。
+そうすれば、あとは
+[(T_IHDR, "IHDR"), (T_GAMA, "gAMA") ... ] を作っておけば良い。
+chunkMaker T_IHDR ... のように使えるだろう。

@@ -12,3 +12,4 @@
 	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
 	今の PNG は Chunks とかの名前に変えようかな
 	この本来の PNG は Header と Image と Values を持てば良いだろう
+5. instance Field (Int, Int, Int) はやめる。ちゃんと newtype か何かを使おう
