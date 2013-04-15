@@ -1,4 +1,5 @@
 {-# LANGUAGE
+	TemplateHaskell,
 	QuasiQuotes,
 	TypeFamilies,
 	FlexibleInstances,
@@ -37,8 +38,10 @@ import Data.ByteString.Lazy as BSL
 import Data.Word (Word8, Word32)
 import Data.Bits (Bits, (.&.), (.|.), shiftL, shiftR)
 import Data.Monoid (mempty)
+import Control.Applicative ((<$>))
 import Control.Monad (unless)
 import Control.Arrow(first)
+import Language.Haskell.TH
 
 --------------------------------------------------------------------------------
 
@@ -157,25 +160,23 @@ intToWords = itw []
 wordsToInt :: Bits i => [Word8] -> i
 wordsToInt = foldl (\r w -> r `shiftL` 8 .|. fromIntegral w) 0
 
-instance Field Chunk where
-	type FieldArgument Chunk = (Int, ByteString)
-	toBinary (n, _) (ChunkIHDR c) = toBinary n c
-	toBinary (n, _) (ChunkGAMA c) = toBinary n c
-	toBinary (n, _) (ChunkSRGB c) = toBinary n c
-	toBinary (n, _) (ChunkCHRM chrm) = toBinary n chrm
-	toBinary (n, _) (ChunkPLTE p) = toBinary n p
-	toBinary (n, _) (ChunkBKGD c) = toBinary n c
-	toBinary (n, _) (ChunkIDAT c) = toBinary n c
-	toBinary (n, _) (ChunkTEXT c) = toBinary n c
-	toBinary (n, _) (ChunkIEND c) = toBinary n c
-	toBinary (n, _) (Others _ str) = toBinary n str
-	fromBinary (n, "IHDR") = fmap (first ChunkIHDR) . fromBinary n
-	fromBinary (n, "gAMA") = fmap (first ChunkGAMA) . fromBinary n
-	fromBinary (n, "sRGB") = fmap (first ChunkSRGB) . fromBinary n
-	fromBinary (n, "cHRM") = fmap (first ChunkCHRM) . fromBinary n
-	fromBinary (n, "PLTE") = fmap (first ChunkPLTE) . fromBinary n
-	fromBinary (n, "bKGD") = fmap (first ChunkBKGD) . fromBinary n
-	fromBinary (n, "IDAT") = fmap (first ChunkIDAT) . fromBinary n
-	fromBinary (n, "tEXt") = fmap (first ChunkTEXT) . fromBinary n
-	fromBinary (n, "IEND") = fmap (first ChunkIEND) . fromBinary n
-	fromBinary (n, nam) = fmap (first $ Others nam) . fromBinary n
+(: []) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
+	tySynInstD ''FieldArgument [conT ''Chunk]
+		(tupleT 2 `appT` conT ''Int `appT` conT ''ByteString),
+	funD 'toBinary $ map mkToBinary chunkConsNames ++ [clause
+		[tupP [varP $ mkName "n", wildP],
+			conP 'Others [wildP, varP $ mkName "str"]]
+		(normalB $ appsE
+			[varE 'toBinary, varE $ mkName "n", varE $ mkName "str"])
+		[]
+	 ],
+	funD 'fromBinary $ map (uncurry mkFromBinary) chunkNamePairs ++ [clause
+		[tupP [varP $ mkName "n", varP $ mkName "nam"]]
+		(normalB $ infixApp
+			(varE 'fmap `appE` (varE 'first `appE`
+				(conE 'Others `appE` varE (mkName "nam"))))
+			(varE '(.))
+			(varE 'fromBinary `appE` varE (mkName "n")))
+		[]
+	 ]
+ ]

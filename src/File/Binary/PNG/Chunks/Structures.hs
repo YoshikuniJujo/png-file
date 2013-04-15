@@ -10,6 +10,28 @@ import File.Binary.Instances.BigEndian ()
 import Data.Monoid
 import Data.ByteString.Lazy
 
+critical :: [String]
+critical = ["IHDR", "PLTE", "IDAT", "IEND"]
+
+beforePLTE :: [String]
+beforePLTE = ["cHRM", "gAMA", "iCCP", "sBIT", "sRGB", "bKGD", "hIST", "tRNS"]
+
+beforeIDAT :: [String]
+beforeIDAT = ["pHYs", "sPLT"]
+
+anyPlace :: [String]
+anyPlace = ["tIME", "iTXt", "tEXt", "zTXt"]
+
+type ICCP = DATA
+type SBIT = DATA
+type HIST = DATA
+type TRNS = DATA
+type PHYS = DATA
+type SPLT = DATA
+type TIME = DATA
+type ITXT = DATA
+type ZTXT = DATA
+
 [binary|
 
 IHDR deriving Show
@@ -32,6 +54,28 @@ arg :: Int
 1: interlaceType
 
 |]
+
+[binary|
+
+PLTE deriving Show
+
+arg :: Int
+
+((), Just (arg `div` 3)){[(Int, Int, Int)]}: colors
+
+|]
+
+[binary|
+
+IDAT deriving Show
+
+arg :: Int
+
+arg{ByteString}: idat_body
+
+|]
+
+[binary|IEND deriving Show arg :: Int|]
 
 [binary|
 
@@ -63,16 +107,6 @@ arg :: Int
 
 |]
 
-[binary|
-
-PLTE deriving Show
-
-arg :: Int
-
-((), Just (arg `div` 3)){[(Int, Int, Int)]}: colors
-
-|]
-
 instance Field (Int, Int, Int) where
 	type FieldArgument (Int, Int, Int) = ()
 	toBinary _ (b, g, r) = mconcat [toBinary 1 b, toBinary 1 g, toBinary 1 r]
@@ -94,16 +128,6 @@ arg :: Int
 
 [binary|
 
-IDAT deriving Show
-
-arg :: Int
-
-arg{ByteString}: idat_body
-
-|]
-
-[binary|
-
 TEXT deriving Show
 
 arg :: Int
@@ -112,5 +136,12 @@ arg :: Int
 
 |]
 
-[binary|IEND deriving Show arg :: Int|]
+[binary|
 
+DATA deriving Show
+
+arg :: Int
+
+arg{ByteString}: dat
+
+|]
