@@ -2,48 +2,42 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module File.Binary.PNG.RW (
+	PNG(..),
+	Chunk(..),
 	TypeChunk(..),
 	typeChunk,
-	readBinaryFile,
-	writeBinaryFile,
 
-	Chunk,
+	IHDR,
+	PLTE,
+	IDAT(..),
+	IEND(..),
 
-	ihdr,
-	plte,
-
-	chunkToChunkStructure,
-	mkIDAT,
+	createChunk,
 	chunkData,
-	PNG(..),
-	needs
+
+	needs,
+	beforeIDATs,
+	beforePLTEs,
+	anyplaces,
 ) where
 
-import File.Binary (binary, Field(..), Binary(..), readBinaryFile, writeBinaryFile)
-import File.Binary.Instances ()
-import File.Binary.Instances.BigEndian ()
-import File.Binary.PNG.Chunks
-import File.Binary.PNG.CRC (crcb, checkCRC)
-import qualified Data.ByteString as BS (ByteString)
-import Data.ByteString.Lazy as BSL
-	(ByteString, pack, unpack, fromChunks, append)
-import Data.Word (Word8, Word32)
-import Data.Bits (Bits, (.&.), (.|.), shiftL, shiftR)
+import Language.Haskell.TH (
+	mkName, instanceD, tySynInstD, cxt, funD, clause, normalB,
+	conT, appT, tupleT, conP, varP, wildP, tupP,
+	conE, varE, appE, appsE, infixApp)
 import Control.Applicative ((<$>))
 import Control.Arrow(first)
-import Language.Haskell.TH
+import Data.ByteString.Lazy (ByteString, append)
+import File.Binary (binary, Field(..), Binary(..))
+import File.Binary.Instances ()
+import File.Binary.Instances.BigEndian ()
+import File.Binary.PNG.CRC (crcb, checkCRC)
+import File.Binary.PNG.Chunks (
+	Chunk(..), TypeChunk(..), IHDR, PLTE, IDAT(..), IEND(..),
+	typeChunk, name, needs, beforeIDATs, beforePLTEs, anyplaces,
+	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs)
 
 --------------------------------------------------------------------------------
-
-chunkToChunkStructure :: Chunk -> ChunkStructure
-chunkToChunkStructure cb = ChunkStructure {
-	chunkSize = length (toBinary (undefined, name cb) cb :: String),
-	chunkName = name cb,
-	chunkData = cb,
-	chunkCRC = CRC }
-
-mkIDAT :: BS.ByteString -> Chunk
-mkIDAT = ChunkIDAT . IDAT . fromChunks . (: [])
 
 [binary|
 
@@ -69,6 +63,13 @@ ChunkStructure deriving Show
 
 |]
 
+createChunk :: Chunk -> ChunkStructure
+createChunk cb = ChunkStructure {
+	chunkSize = length (toBinary (undefined, name cb) cb :: String),
+	chunkName = name cb,
+	chunkData = cb,
+	chunkCRC = CRC }
+
 data CRC = CRC deriving Show
 
 instance Field CRC where
@@ -80,20 +81,6 @@ instance Field CRC where
 		where
 		(bs, rest) = getBytes 4 b
 	toBinary (nam, bod, arg) _ = makeBinary $ crcb $ nam `append` toBinary arg bod
-
-instance Field Word32 where
-	type FieldArgument Word32 = Int
-	toBinary n = makeBinary . pack . intToWords n
-	fromBinary n = return . first (wordsToInt . unpack) . getBytes n
-
-intToWords :: (Bits i, Integral i) => Int -> i -> [Word8]
-intToWords = itw []
-	where
-	itw r 0 _ = r
-	itw r n i = itw (fromIntegral (i .&. 0xff) : r) (n - 1) (i `shiftR` 8)
-
-wordsToInt :: Bits i => [Word8] -> i
-wordsToInt = foldl (\r w -> r `shiftL` 8 .|. fromIntegral w) 0
 
 (: []) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
 	tySynInstD ''FieldArgument [conT ''Chunk]

@@ -5,6 +5,7 @@ import File.Binary.PNG
 
 import Prelude hiding (concat)
 import System.Environment (getArgs)
+import File.Binary(readBinaryFile, writeBinaryFile)
 
 --------------------------------------------------------------------------------
 
@@ -13,20 +14,16 @@ main = do
 	[fin, fout] <- getArgs
 	cnt <- readBinaryFile fin
 
-	let Right chs = readPNG cnt
-	putStrLn $ take 700 (show chs) ++ "..."
+	let Right cs = readPNG cnt
+	putStrLn $ take 700 (show cs) ++ "..."
 
-	let	i = ihdr chs
-		p = plte chs
-		o = otherChunks chs
-		b = body chs
-		new = png i p o b
+	let	i = ihdr cs
+		p = plte cs
+		o = others cs
+		b = body cs
 
-	let binary = writePNG new
+	let binary = writePNG i p o b
 	writeBinaryFile fout binary
-
-	putStrLn ""
-	putStrLn $ take 700 (show new) ++ "..."
 
 {-
 ihdr :: IHDR
