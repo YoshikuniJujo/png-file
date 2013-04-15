@@ -13,3 +13,12 @@
 	今の PNG は Chunks とかの名前に変えようかな
 	この本来の PNG は Header と Image と Values を持てば良いだろう
 5. instance Field (Int, Int, Int) はやめる。ちゃんと newtype か何かを使おう
+6. refactoring 必要だ
+7. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
+8. 先に refactoring してから module 名を見直そう
+	File.Binary.PNG.RW
+	File.Binary.PNG.Chunks
+	File.Binary.PNG.Chunks.Structure
+	File.Binary.PNG.Chunks.Templates
+	File.Binary.PNG
+	File.Binary.PNG.CRC

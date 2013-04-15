@@ -33,6 +33,10 @@ library
         File.Binary.PNG.CRC,
         File.Binary.PNG.RW,
         File.Binary.PNG.Chunks,
+        File.Binary.PNG.Chunks.Structures,
+        File.Binary.PNG.Chunks.Templates,
         Language.Haskell.TH.Tools
-    build-depends:	base > 3 && < 5, binary-file, bytestring, zlib, array
+    build-depends:
+        base > 3 && < 5, binary-file, bytestring, zlib, array,
+        template-haskell
     ghc-options:	-Wall

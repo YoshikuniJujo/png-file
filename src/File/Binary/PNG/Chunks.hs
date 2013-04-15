@@ -5,6 +5,7 @@
 
 module File.Binary.PNG.Chunks (
 	Chunk(..),
+	TypeChunk(..),
 	IHDR(..),
 	CHRM(..),
 	GAMA(..),
@@ -32,7 +33,9 @@ module File.Binary.PNG.Chunks (
 	anyPlace,
 
 	chunkConsNames,
-	chunkNamePairs
+	chunkNamePairs,
+
+	needs
 ) where
 
 import Prelude hiding (concat)
