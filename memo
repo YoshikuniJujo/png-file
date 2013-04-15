@@ -98,3 +98,11 @@ needs, beforeIDATs, beforePLTEs, anyplaces は名前を変えよう。
 createChunk と chunkData は上に公開するべきではないだろう。
 IHDR, PLTE, IDAT, IEND 等はどう考えるべきか。
 これらはおそらく必要になるだろう。
+
+さて、細かい話は上のようになるだろうが、もっと大きい話のメモをしておこう。
+つまり、Binary と [Chunk] の相互変換をする module が必要だ。
+それが現在のところ File.Binary.PNG.RW あたりでやっていることだ。
+そして真の意味での Chunks module は、IHDR 等を公開する。
+これは別に import したほうが良さそうだ。
+data Chunk はそれらの chunk 達をひとつにまとめるためだけにあるということを意識
+しておく必要がある。
