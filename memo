@@ -75,3 +75,26 @@ chunkMaker T_IHDR ... のように使えるだろう。
 T_IHDR -> ChunkIHDR の自動生成は上手くいかない。
 つまり、各コンストラクターの型が違うということだ。
 コード生成を使うしかないのだろうか。
+
+2013.04.15 Mon.
+
+自動生成等はうまくいった。
+そしてコードの重複はかなり消せたが、コードはぐちゃぐちゃになった。
+refactoring が必要だ。
+それぞれの module の in と out についてちゃんと考える必要がある。
+まずは今のままの名前で働きをきちんと特定して、
+そのあとで適切な名前を与えよう。
+
+File.Binary.PNG.RW を refactoring 中だ。
+この module は何をするべきか。
+上に対しては、Binary <-> [Chunk] をするべきだろう。
+今のところはそこらへんがちゃんとしてない。
+上に対して PNG(..) を公開するべきではないだろう。
+typeChunk や TypeChunk は公開していいだろう。
+これらはつまり Chunk を上手く扱うための構造なのだから。
+needs, beforeIDATs, beforePLTEs, anyplaces は名前を変えよう。
+これらはいずれかの形で必要にはなる。
+
+createChunk と chunkData は上に公開するべきではないだろう。
+IHDR, PLTE, IDAT, IEND 等はどう考えるべきか。
+これらはおそらく必要になるだろう。
