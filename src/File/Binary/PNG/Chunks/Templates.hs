@@ -1,63 +1,56 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module File.Binary.PNG.Chunks.Templates where
+module File.Binary.PNG.Chunks.Templates (dataChunk, typeName) where
 
-import Language.Haskell.TH
-import Control.Applicative
-import Control.Arrow
-import Data.Char
-import Data.ByteString.Lazy (ByteString)
-import Data.ByteString.Lazy.Char8 (pack)
+import Language.Haskell.TH (
+	Name, mkName, stringL,
+	DecsQ, dataD, cxt, normalC, notStrict, strictType, sigD,
+	funD, clause, normalB, TypeQ, conT, appT, arrowT, conP, varP, litP,
+	conE, varE, appE, litE)
+import Control.Applicative ((<$>), (<*>))
+import Control.Arrow ((&&&))
+import Data.Char (toUpper)
+import Data.ByteString.Lazy.Char8 (ByteString, pack)
+
+--------------------------------------------------------------------------------
 
 dataChunk :: [String] -> DecsQ
-dataChunk chunkNames = do
-	let	pairs = map ((mkName . ("Chunk" ++) &&& conT . mkName . id) .
-				map toUpper)
-			chunkNames
-		cons = map (\(c, t) -> normalC c [strictType (return NotStrict) t])
-			pairs
-		bs = strictType (return NotStrict) $ conT ''ByteString
+dataChunk chunks = do
+	let	con = flip map chunks $ (.)
+			(normalC <$> fst <*> (: []) . strictType notStrict . snd)
+			((mkName . ("Chunk" ++) &&& conT . mkName . id) . upper)
+		bs = strictType notStrict $ conT ''ByteString
 		others = normalC (mkName "Others") [bs, bs]
-	dd <- dataD (cxt []) (mkName "Chunk") [] (cons ++ [others]) [''Show]
-	return [dd]
+	(: []) <$> dataD (cxt []) (mkName "Chunk") [] (con ++ [others]) [''Show]
 
-typeNameTable :: [String] -> DecsQ
-typeNameTable chunkNames = do
-	let	tups = map
-			((\(t, n) -> tupE [t, n]) .
-				(conE . mkName . ("T_" ++) . map toUpper &&&
-					litE . stringL))
-			chunkNames
-	sd <- sigD (mkName "typeNameT") $ listT `appT`
-		(tupleT 2 `appT` conT (mkName "TypeChunk") `appT` conT ''ByteString)
-	vd <- valD (varP $ mkName "typeNameT") (normalB $ listE tups) []
-	return [sd, vd]
+typeName :: [String] -> DecsQ
+typeName chunks = let types = map (mkName . ("T_" ++) . upper) chunks in
+	(++) <$> nameToType chunks types <*> typeToName types chunks
 
-nameType :: [String] -> DecsQ
-nameType chunkNames = (++) <$> nameToType chunkNames <*> typeToName chunkNames
-
-nameToType :: [String] -> DecsQ
-nameToType chunkNames = do
-	let	pair = map (id &&& conE . mkName . ("T_" ++) . map toUpper) chunkNames
-		mkClause arg ret =
-			clause [litP $ stringL arg] (normalB ret) []
-		otherClause = flip (clause [varP $ mkName "str"]) [] $ normalB $
-			conE (mkName "T_Others") `appE`
-				(varE 'pack `appE` varE (mkName "str"))
-	sd <- sigD (mkName "nameToType") $
-		arrowT `appT` conT ''String `appT` conT (mkName "TypeChunk")
-	fd <- funD (mkName "nameToType") $ map (uncurry mkClause) pair ++ [otherClause]
+nameToType :: [String] -> [Name] -> DecsQ
+nameToType chunks types = do
+	let	mkClause n t = clause [litP $ stringL n] (normalB $ conE t) []
+		other = flip (clause [varP $ mkName "str"]) [] $ normalB $
+			conE tothers `appE` (varE 'pack `appE` varE (mkName "str"))
+	sd <- sigD ntt $ conT ''String --> conT tchunk
+	fd <- funD ntt $ zipWith mkClause chunks types ++ [other]
 	return [sd, fd]
 
-typeToName :: [String] -> DecsQ
-typeToName chunkNames = do
-	let	pair = map (mkName . ("T_" ++) . map toUpper &&& id) chunkNames
-		mkClause arg ret =
-			clause [conP arg []] (normalB $ litE $ stringL ret) []
-		otherClause = clause
-			[conP (mkName "T_Others") [varP $ mkName "str"]]
+typeToName :: [Name] -> [String] -> DecsQ
+typeToName types chunks = do
+	let	mkClause t n = clause [conP t []] (normalB $ litE $ stringL n) []
+		other = clause [conP tothers [varP $ mkName "str"]]
 			(normalB $ varE $ mkName "str") []
-	sd <- sigD (mkName "typeToName") $
-		arrowT `appT` conT (mkName "TypeChunk") `appT` conT ''ByteString
-	fd <- funD (mkName "typeToName") $ map (uncurry mkClause) pair ++ [otherClause]
+	sd <- sigD ttn $ conT tchunk --> conT '' ByteString
+	fd <- funD ttn $ zipWith mkClause types chunks ++ [other]
 	return [sd, fd]
+
+ntt, ttn, tchunk, tothers :: Name
+[ntt, ttn, tchunk, tothers] =
+	map mkName ["nameToType", "typeToName", "TypeChunk", "T_Others"]
+
+upper :: String -> String
+upper = map toUpper
+
+(-->) :: TypeQ -> TypeQ -> TypeQ
+t1 --> t2 = arrowT `appT` t1 `appT` t2

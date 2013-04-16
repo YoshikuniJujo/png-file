@@ -27,13 +27,13 @@ import File.Binary.PNG.Chunks.Each (
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
-import File.Binary.PNG.Chunks.Templates (dataChunk, nameType)
+import File.Binary.PNG.Chunks.Templates (dataChunk, typeName)
 
 --------------------------------------------------------------------------------
 
 dataChunk chunkNames
 typer ''Chunk 'Others "Chunk"
-nameType chunkNames
+typeName chunkNames
 
 bplte, bidat, aplace :: [TypeChunk]
 [bplte, bidat, aplace] = map (map nameToType) [beforePLTE, beforeIDAT, anyPlace]
