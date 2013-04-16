@@ -18,7 +18,6 @@ module File.Binary.PNG.Chunks.Chunks (
 
 	mkToBinary,
 	mkFromBinary,
-	critical,
 	beforePLTE,
 	beforeIDAT,
 	anyPlace,
@@ -51,8 +50,7 @@ nameToType $ S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
 typeToName $ S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
-critical, beforePLTE, beforeIDAT, anyPlace :: [TypeChunk]
-critical = map getType S.critical
+beforePLTE, beforeIDAT, anyPlace :: [TypeChunk]
 beforePLTE = map getType S.beforePLTE
 beforeIDAT = map getType S.beforeIDAT
 anyPlace = map getType S.anyPlace

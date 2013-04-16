@@ -19,7 +19,7 @@ module File.Binary.PNG.Chunks (
 ) where
 
 import Language.Haskell.TH (
-	mkName, instanceD, tySynInstD, cxt, funD, clause, normalB,
+	mkName, instanceD, cxt, tySynInstD, funD, clause, normalB,
 	conT, appT, tupleT, conP, varP, wildP, tupP,
 	conE, varE, appE, appsE, infixApp)
 import Control.Applicative ((<$>))
@@ -31,21 +31,24 @@ import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.CRC (crcb, checkCRC)
-import File.Binary.PNG.Chunks.Chunks {- (
+import File.Binary.PNG.Chunks.Chunks (
 	Chunk(..), TypeChunk(..), typeChunk, getName,
 	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs,
-	IHDR(..), PLTE(..), IDAT(..), IEND(..), beforePLTE, beforeIDAT, anyPlace) -}
+	IHDR(..), PLTE(..), IDAT(..), IEND(..),
+	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
+	BKGD(..), HIST, PHYS, SPLT, TIME,
+	beforePLTE, beforeIDAT, anyPlace)
 
 --------------------------------------------------------------------------------
 
 getChunks :: Binary b => b -> Either String [Chunk]
 getChunks b = do
 	(p, rest) <- fromBinary () b
-	unless (rest == mempty) $ fail "can't read whole binary"
+	unless (rest == mempty) $ fail "couldn't read whole binary"
 	return $ map chunkData $ chunks p
 
 putChunks :: Binary b => [Chunk] -> b
-putChunks = toBinary () . PNG . map createChunk . sortChunks
+putChunks = toBinary () . PNGFile . map createChunk . sortChunks
 
 filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
 filterChunks ts = filter $ (`elem` ts) . typeChunk
@@ -56,7 +59,7 @@ sortChunks cs = concatMap (($ cs) . filterChunks)
 
 [binary|
 
-PNG deriving Show
+PNGFile deriving Show
 
 1: 0x89
 3: "PNG"
@@ -80,22 +83,23 @@ ChunkStructure deriving Show
 
 createChunk :: Chunk -> ChunkStructure
 createChunk cb = ChunkStructure {
-	chunkSize = length (toBinary (undefined, getName $ typeChunk cb) cb :: String),
-	chunkName = getName $ typeChunk cb,
+	chunkSize = length (toBinary (undefined, name) cb :: String),
+	chunkName = name,
 	chunkData = cb,
 	chunkCRC = CRC }
+	where
+	name = getName $ typeChunk cb
 
 data CRC = CRC deriving Show
 
 instance Field CRC where
 	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
-	fromBinary (nam, bod, arg) b =
+	fromBinary (nam, bod, arg) b = let (bs, rest) = getBytes 4 b in
 		if checkCRC (nam `append` toBinary arg bod) bs
 			then return (CRC, rest)
-			else fail "bad crc"b
-		where
-		(bs, rest) = getBytes 4 b
-	toBinary (nam, bod, arg) _ = makeBinary $ crcb $ nam `append` toBinary arg bod
+			else fail "bad crc"
+	toBinary (nam, bod, arg) _ =
+		makeBinary $ crcb $ nam `append` toBinary arg bod
 
 (: []) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
 	tySynInstD ''FieldArgument [conT ''Chunk]
