@@ -20,7 +20,7 @@ import Data.List (find)
 --------------------------------------------------------------------------------
 
 body :: [Chunk] -> ByteString
-body = decompress . concat . map idat_body . map (\(ChunkIDAT i) -> i) .
+body = decompress . concat . map (idat_body . (\(ChunkIDAT i) -> i)) .
 	filter ((== T_IDAT) . typeChunk)
 
 mkBody :: ByteString -> [Chunk]

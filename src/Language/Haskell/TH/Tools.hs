@@ -1,15 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Language.Haskell.TH.Tools (
-	typer
-) where
+module Language.Haskell.TH.Tools (typer) where
 
 import Language.Haskell.TH
 import Control.Arrow
 import Data.List
 import Data.Maybe
-
--- typer' :: [String] -> DecsQ
 
 typer :: Name -> Name -> String -> DecsQ
 typer con ot remove = do
@@ -29,12 +25,6 @@ typer con ot remove = do
 		cons = map (return . flip NormalC []) names ++ [return otherT]
 		otherClause = clause [otherP]
 			(normalB $ conE otherN `appE` varE ovar) []
-{-
-	runIO $ do
-		print names
-		print other
-		print otherT
--}
 	let tcon = mkName $ "Type" ++ nameBase con
 	sd <- sigD (mkName $ "type" ++ nameBase con) $
 		arrowT `appT` conT con `appT` conT (mkName $ "Type" ++ nameBase con)

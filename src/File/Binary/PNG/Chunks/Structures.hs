@@ -22,6 +22,7 @@ module File.Binary.PNG.Chunks.Structures (
 	SPLT,
 	TIME,
 
+	chunkNames,
 	critical,
 	beforePLTE,
 	beforeIDAT,
@@ -33,6 +34,9 @@ import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import Data.Monoid
 import Data.ByteString.Lazy
+
+chunkNames :: [String]
+chunkNames = critical ++ beforePLTE ++ beforeIDAT ++ anyPlace
 
 critical :: [String]
 critical = ["IHDR", "PLTE", "IDAT", "IEND"]

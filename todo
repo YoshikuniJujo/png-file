@@ -22,3 +22,7 @@
 	File.Binary.PNG
 	File.Binary.PNG.CRC
 	File.Binary.PNG.Chunks
+9. nameToType と typeToName は typeNameTable にまとめてしまおう
+	そこから、それぞれの関数を作る
+10. 9 だと Others がうまくいかない
+11. むしろ、nameToType は nameType にまとめてしまうことにするか

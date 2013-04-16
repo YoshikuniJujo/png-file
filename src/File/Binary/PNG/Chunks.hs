@@ -18,19 +18,19 @@ module File.Binary.PNG.Chunks (
 	
 ) where
 
+import Prelude hiding (length)
 import Control.Monad (unless)
 import Data.Monoid (mempty)
-import Data.ByteString.Lazy (ByteString, append)
-import qualified Data.ByteString.Lazy as BSL (length)
+import Data.ByteString.Lazy (ByteString, append, length)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Chunks (
-	Chunk(..), TypeChunk(..), typeChunk, getName, instanceFieldChunk,
+	Chunk(..), TypeChunk(..), typeChunk, typeToName, instanceFieldChunk,
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
-	BKGD(..), HIST, PHYS, SPLT, TIME, beforePLTE, beforeIDAT, anyPlace)
+	BKGD(..), HIST, PHYS, SPLT, TIME, bplte, bidat, aplace)
 
 --------------------------------------------------------------------------------
 
@@ -45,19 +45,19 @@ putChunks = toBinary () . PNGFile . map createChunk . sortChunks
 
 createChunk :: Chunk -> ChunkStructure
 createChunk cb = ChunkStructure {
-	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cb,
+	chunkSize = fromIntegral $ length $ toBinary (undefined, name) cb,
 	chunkName = name,
 	chunkData = cb,
 	chunkCRC = CRC }
 	where
-	name = getName $ typeChunk cb
+	name = typeToName $ typeChunk cb
 
 filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
 filterChunks ts = filter $ (`elem` ts) . typeChunk
 
 sortChunks :: [Chunk] -> [Chunk]
 sortChunks cs = concatMap (($ cs) . filterChunks)
-	[[T_IHDR], beforePLTE, [T_PLTE], beforeIDAT, [T_IDAT], anyPlace, [T_IEND]]
+	[[T_IHDR], bplte, [T_PLTE], bidat, [T_IDAT], aplace, [T_IEND]]
 
 [binary|
 
