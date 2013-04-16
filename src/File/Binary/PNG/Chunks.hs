@@ -18,26 +18,19 @@ module File.Binary.PNG.Chunks (
 	
 ) where
 
-import Language.Haskell.TH (
-	mkName, instanceD, cxt, tySynInstD, funD, clause, normalB,
-	conT, appT, tupleT, conP, varP, wildP, tupP,
-	conE, varE, appE, appsE, infixApp)
-import Control.Applicative ((<$>))
-import Control.Arrow(first)
 import Control.Monad (unless)
 import Data.Monoid (mempty)
 import Data.ByteString.Lazy (ByteString, append)
+import qualified Data.ByteString.Lazy as BSL (length)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Chunks (
-	Chunk(..), TypeChunk(..), typeChunk, getName,
-	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs,
+	Chunk(..), TypeChunk(..), typeChunk, getName, instanceFieldChunk,
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
-	BKGD(..), HIST, PHYS, SPLT, TIME,
-	beforePLTE, beforeIDAT, anyPlace)
+	BKGD(..), HIST, PHYS, SPLT, TIME, beforePLTE, beforeIDAT, anyPlace)
 
 --------------------------------------------------------------------------------
 
@@ -49,6 +42,15 @@ getChunks b = do
 
 putChunks :: Binary b => [Chunk] -> b
 putChunks = toBinary () . PNGFile . map createChunk . sortChunks
+
+createChunk :: Chunk -> ChunkStructure
+createChunk cb = ChunkStructure {
+	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cb,
+	chunkName = name,
+	chunkData = cb,
+	chunkCRC = CRC }
+	where
+	name = getName $ typeChunk cb
 
 filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
 filterChunks ts = filter $ (`elem` ts) . typeChunk
@@ -81,16 +83,9 @@ ChunkStructure deriving Show
 
 |]
 
-createChunk :: Chunk -> ChunkStructure
-createChunk cb = ChunkStructure {
-	chunkSize = length (toBinary (undefined, name) cb :: String),
-	chunkName = name,
-	chunkData = cb,
-	chunkCRC = CRC }
-	where
-	name = getName $ typeChunk cb
-
 data CRC = CRC deriving Show
+
+instanceFieldChunk
 
 instance Field CRC where
 	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
@@ -100,24 +95,3 @@ instance Field CRC where
 			else fail "bad crc"
 	toBinary (nam, bod, arg) _ =
 		makeBinary $ crc $ nam `append` toBinary arg bod
-
-(: []) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
-	tySynInstD ''FieldArgument [conT ''Chunk]
-		(tupleT 2 `appT` conT ''Int `appT` conT ''ByteString),
-	funD 'toBinary $ map mkToBinary chunkConsNames ++ [clause
-		[tupP [varP $ mkName "n", wildP],
-			conP 'Others [wildP, varP $ mkName "str"]]
-		(normalB $ appsE
-			[varE 'toBinary, varE $ mkName "n", varE $ mkName "str"])
-		[]
-	 ],
-	funD 'fromBinary $ map (uncurry mkFromBinary) chunkNamePairs ++ [clause
-		[tupP [varP $ mkName "n", varP $ mkName "nam"]]
-		(normalB $ infixApp
-			(varE 'fmap `appE` (varE 'first `appE`
-				(conE 'Others `appE` varE (mkName "nam"))))
-			(varE '(.))
-			(varE 'fromBinary `appE` varE (mkName "n")))
-		[]
-	 ]
- ]
