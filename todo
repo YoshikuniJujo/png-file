@@ -12,17 +12,14 @@
 	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
 	今の PNG は Chunks とかの名前に変えようかな
 	この本来の PNG は Header と Image と Values を持てば良いだろう
-5. instance Field (Int, Int, Int) はやめる。ちゃんと newtype か何かを使おう
+**5. instance Field (Int, Int, Int) はやめる。ちゃんと newtype か何かを使おう
 6. refactoring 必要だ
 7. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
 8. 先に refactoring してから module 名を見直そう
-	File.Binary.PNG.Chunks.Chunks
 	File.Binary.PNG.Chunks.Structure
 	File.Binary.PNG.Chunks.Templates
 	File.Binary.PNG
 	File.Binary.PNG.CRC
 	File.Binary.PNG.Chunks
-9. nameToType と typeToName は typeNameTable にまとめてしまおう
-	そこから、それぞれの関数を作る
-10. 9 だと Others がうまくいかない
-11. むしろ、nameToType は nameType にまとめてしまうことにするか
+	File.Binary.PNG.Chunks.Chunks
+9. File.Binary.PNG.Chunks.Chunks の名前を変える

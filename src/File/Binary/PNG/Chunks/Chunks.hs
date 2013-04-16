@@ -22,7 +22,7 @@ import Language.Haskell.TH (
 	ExpQ, conE, varE, appE, appsE, infixApp)
 import Language.Haskell.TH.Tools (typer)
 import File.Binary (Field(..))
-import File.Binary.PNG.Chunks.Structures (
+import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,

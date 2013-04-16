@@ -33,7 +33,7 @@ library
         File.Binary.PNG.Chunks,
         File.Binary.PNG.Chunks.CRC,
         File.Binary.PNG.Chunks.Chunks,
-        File.Binary.PNG.Chunks.Structures,
+        File.Binary.PNG.Chunks.Each,
         File.Binary.PNG.Chunks.Templates,
         Language.Haskell.TH.Tools
     build-depends:
