@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module File.Binary.PNG.Chunks.Chunks (
+module File.Binary.PNG.Chunks.Data (
 	Chunk(..), TypeChunk(..), typeChunk, typeToName,
 	instanceFieldChunk,
 
@@ -22,12 +22,12 @@ import Language.Haskell.TH (
 	ExpQ, conE, varE, appE, appsE, infixApp)
 import Language.Haskell.TH.Tools (typer)
 import File.Binary (Field(..))
+import File.Binary.PNG.Chunks.Data.TH (dataChunk, typeName)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
-import File.Binary.PNG.Chunks.Templates (dataChunk, typeName)
 
 --------------------------------------------------------------------------------
 

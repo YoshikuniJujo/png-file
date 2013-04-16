@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module File.Binary.PNG.Chunks.Templates (dataChunk, typeName) where
+module File.Binary.PNG.Chunks.Data.TH (dataChunk, typeName) where
 
 import Language.Haskell.TH (
 	Name, mkName, stringL,

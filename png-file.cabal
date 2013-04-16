@@ -32,9 +32,9 @@ library
     other-modules:
         File.Binary.PNG.Chunks,
         File.Binary.PNG.Chunks.CRC,
-        File.Binary.PNG.Chunks.Chunks,
+        File.Binary.PNG.Chunks.Data,
+        File.Binary.PNG.Chunks.Data.TH,
         File.Binary.PNG.Chunks.Each,
-        File.Binary.PNG.Chunks.Templates,
         Language.Haskell.TH.Tools
     build-depends:
         base > 3 && < 5, binary-file, bytestring, zlib, array,

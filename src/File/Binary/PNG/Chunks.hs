@@ -26,7 +26,7 @@ import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
-import File.Binary.PNG.Chunks.Chunks (
+import File.Binary.PNG.Chunks.Data (
 	Chunk(..), TypeChunk(..), typeChunk, typeToName, instanceFieldChunk,
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
