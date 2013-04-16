@@ -10,7 +10,7 @@ module File.Binary.PNG (
 ) where
 
 import Prelude hiding (concat)
-import File.Binary.PNG.RW
+import File.Binary.PNG.Chunks
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
