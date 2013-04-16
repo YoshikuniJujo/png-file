@@ -2,7 +2,31 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module File.Binary.PNG.Chunks.Structures where
+module File.Binary.PNG.Chunks.Structures (
+	IHDR,
+	PLTE,
+	IDAT(..),
+	IEND(..),
+	TRNS,
+	CHRM,
+	GAMA,
+	ICCP,
+	SBIT,
+	SRGB,
+	ITXT,
+	TEXT,
+	ZTXT,
+	BKGD,
+	HIST,
+	PHYS,
+	SPLT,
+	TIME,
+
+	critical,
+	beforePLTE,
+	beforeIDAT,
+	anyPlace
+) where
 
 import File.Binary
 import File.Binary.Instances ()

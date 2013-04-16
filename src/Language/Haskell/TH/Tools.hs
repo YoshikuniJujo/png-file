@@ -9,6 +9,8 @@ import Control.Arrow
 import Data.List
 import Data.Maybe
 
+-- typer' :: [String] -> DecsQ
+
 typer :: Name -> Name -> String -> DecsQ
 typer con ot remove = do
 	TyConI (DataD _ _ _ s _) <- reify con

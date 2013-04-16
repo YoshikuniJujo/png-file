@@ -106,3 +106,7 @@ IHDR, PLTE, IDAT, IEND 等はどう考えるべきか。
 これは別に import したほうが良さそうだ。
 data Chunk はそれらの chunk 達をひとつにまとめるためだけにあるということを意識
 しておく必要がある。
+
+とりあえず Binary と [Chunk] の相互変換の部分だけ作るべきだろう。
+
+今、RW.hs としているものを Chunks.hs とする。

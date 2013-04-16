@@ -14,7 +14,7 @@ main = do
 	[fin, fout] <- getArgs
 	cnt <- readBinaryFile fin
 
-	let Right cs = readPNG cnt
+	let Right cs = getChunks cnt
 	putStrLn $ take 700 (show cs) ++ "..."
 
 	let	i = ihdr cs
@@ -22,7 +22,7 @@ main = do
 		o = others cs
 		b = body cs
 
-	let binary = writePNG i p o b
+	let binary = putChunks $ mkChunks i p o b
 	writeBinaryFile fout binary
 
 {-

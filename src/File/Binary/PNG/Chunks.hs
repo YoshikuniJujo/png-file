@@ -6,17 +6,13 @@
 module File.Binary.PNG.Chunks (
 	Chunk(..),
 	TypeChunk(..),
-	IHDR(..),
-	CHRM(..),
-	GAMA(..),
-	SRGB(..),
-	PLTE(..),
-	BKGD(..),
-	IDAT(..),
-	TEXT(..),
-	IEND(..),
 	typeChunk,
-	name,
+	getName,
+
+	IHDR,
+	PLTE,
+	IDAT(..),
+	IEND(..),
 
 	mkToBinary,
 	mkFromBinary,
@@ -26,42 +22,38 @@ module File.Binary.PNG.Chunks (
 	anyPlace,
 
 	chunkConsNames,
-	chunkNamePairs,
-
-	needs,
-	beforePLTEs,
-	beforeIDATs,
-	anyplaces
+	chunkNamePairs
 ) where
 
-import Data.ByteString.Lazy (ByteString)
 import Data.Char
 import Control.Arrow
 
 import Language.Haskell.TH
 import Language.Haskell.TH.Tools
-import File.Binary.PNG.Chunks.Structures
+import File.Binary.PNG.Chunks.Structures hiding
+	(critical, beforePLTE, beforeIDAT, anyPlace)
+import qualified File.Binary.PNG.Chunks.Structures as S
 import File.Binary.PNG.Chunks.Templates
 import File.Binary
 
 --------------------------------------------------------------------------------
 
 chunkNames :: [String]
-chunkNames = critical ++ beforePLTE ++ beforeIDAT ++ anyPlace
+chunkNames = S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
-makeDataChunk $ critical ++ beforePLTE ++ beforeIDAT ++ anyPlace
+makeDataChunk $ S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
 typer ''Chunk 'Others "Chunk"
 
-nameToType $ critical ++ beforePLTE ++ beforeIDAT ++ anyPlace
+nameToType $ S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
-typeToName $ critical ++ beforePLTE ++ beforeIDAT ++ anyPlace
+typeToName $ S.critical ++ S.beforePLTE ++ S.beforeIDAT ++ S.anyPlace
 
-needs, beforePLTEs, beforeIDATs, anyplaces :: [TypeChunk]
-needs = map getType critical
-beforePLTEs = map getType beforePLTE
-beforeIDATs = map getType beforeIDAT
-anyplaces = map getType anyPlace
+critical, beforePLTE, beforeIDAT, anyPlace :: [TypeChunk]
+critical = map getType S.critical
+beforePLTE = map getType S.beforePLTE
+beforeIDAT = map getType S.beforeIDAT
+anyPlace = map getType S.anyPlace
 
 chunkConsNames :: [Name]
 chunkConsNames = map (mkName . ("Chunk" ++) . map toUpper) chunkNames
@@ -84,6 +76,3 @@ mkFromBinary ns n =
 			(varE '(.))
 			(varE 'fromBinary `appE` varE (mkName "n")))
 		[]
-
-name :: Chunk -> ByteString
-name = getName . typeChunk

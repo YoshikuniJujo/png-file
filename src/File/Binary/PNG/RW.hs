@@ -2,23 +2,22 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module File.Binary.PNG.RW (
-	PNG(..),
 	Chunk(..),
 	TypeChunk(..),
 	typeChunk,
+
+	getChunks,
+	putChunks,
 
 	IHDR,
 	PLTE,
 	IDAT(..),
 	IEND(..),
 
-	createChunk,
-	chunkData,
-
-	needs,
-	beforeIDATs,
-	beforePLTEs,
-	anyplaces,
+	critical,
+	beforePLTE,
+	beforeIDAT,
+	anyPlace
 ) where
 
 import Language.Haskell.TH (
@@ -27,17 +26,29 @@ import Language.Haskell.TH (
 	conE, varE, appE, appsE, infixApp)
 import Control.Applicative ((<$>))
 import Control.Arrow(first)
+import Control.Monad (unless)
+import Data.Monoid (mempty)
 import Data.ByteString.Lazy (ByteString, append)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.CRC (crcb, checkCRC)
 import File.Binary.PNG.Chunks (
-	Chunk(..), TypeChunk(..), IHDR, PLTE, IDAT(..), IEND(..),
-	typeChunk, name, needs, beforeIDATs, beforePLTEs, anyplaces,
-	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs)
+	Chunk(..), TypeChunk(..), typeChunk, getName,
+	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs,
+	IHDR, PLTE, IDAT(..), IEND(..),
+	critical, beforePLTE, beforeIDAT, anyPlace)
 
 --------------------------------------------------------------------------------
+
+getChunks :: Binary b => b -> Either String [Chunk]
+getChunks b = do
+	(p, rest) <- fromBinary () b
+	unless (rest == mempty) $ fail "can't read whole binary"
+	return $ map chunkData $ chunks p
+
+putChunks :: Binary b => [Chunk] -> b
+putChunks = toBinary () . PNG . map createChunk
 
 [binary|
 
@@ -65,8 +76,8 @@ ChunkStructure deriving Show
 
 createChunk :: Chunk -> ChunkStructure
 createChunk cb = ChunkStructure {
-	chunkSize = length (toBinary (undefined, name cb) cb :: String),
-	chunkName = name cb,
+	chunkSize = length (toBinary (undefined, getName $ typeChunk cb) cb :: String),
+	chunkName = getName $ typeChunk cb,
 	chunkData = cb,
 	chunkCRC = CRC }
 
