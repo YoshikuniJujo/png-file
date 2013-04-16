@@ -30,8 +30,8 @@ library
     hs-source-dirs:	src
     exposed-modules:	File.Binary.PNG
     other-modules:
-        File.Binary.PNG.CRC,
         File.Binary.PNG.Chunks,
+        File.Binary.PNG.Chunks.CRC,
         File.Binary.PNG.Chunks.Chunks,
         File.Binary.PNG.Chunks.Structures,
         File.Binary.PNG.Chunks.Templates,

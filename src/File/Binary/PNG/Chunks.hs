@@ -30,7 +30,7 @@ import Data.ByteString.Lazy (ByteString, append)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
-import File.Binary.PNG.CRC (crcb, checkCRC)
+import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Chunks (
 	Chunk(..), TypeChunk(..), typeChunk, getName,
 	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs,
@@ -99,7 +99,7 @@ instance Field CRC where
 			then return (CRC, rest)
 			else fail "bad crc"
 	toBinary (nam, bod, arg) _ =
-		makeBinary $ crcb $ nam `append` toBinary arg bod
+		makeBinary $ crc $ nam `append` toBinary arg bod
 
 (: []) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
 	tySynInstD ''FieldArgument [conT ''Chunk]
