@@ -38,15 +38,9 @@ plte c = do
 	ChunkPLTE pl <- find ((== T_PLTE) . typeChunk) c
 	return pl
 
-bplte, bidat, aplace, others, others' :: [Chunk] -> [Chunk]
-bplte = filter $ (`elem` beforePLTE) . typeChunk
-bidat = filter $ (`elem` beforeIDAT) . typeChunk
-aplace = filter $ (`elem` anyPlace) . typeChunk
-others = filter $ (`notElem` critical) . typeChunk
-others' = filter $ (`notElem` critical ++ beforePLTE ++ beforeIDAT ++ anyPlace) . typeChunk
+others :: [Chunk] -> [Chunk]
+others = filter $ (`notElem` [T_IHDR, T_PLTE, T_IDAT, T_IEND]) . typeChunk
 
 mkChunks :: IHDR -> Maybe PLTE -> [Chunk] -> ByteString -> [Chunk]
-mkChunks i (Just p) cs_ b = ChunkIHDR i : bplte cs_ ++ ChunkPLTE p : bidat cs_ ++
-	mkBody b ++ aplace cs_ ++ others' cs_ ++ [ChunkIEND IEND]
-mkChunks i Nothing cs_ b = ChunkIHDR i : bplte cs_ ++ bidat cs_ ++
-	mkBody b ++ aplace cs_ ++ others' cs_ ++ [ChunkIEND IEND]
+mkChunks i (Just p) cs b = ChunkIHDR i : ChunkPLTE p : mkBody b ++ cs
+mkChunks i Nothing cs b = ChunkIHDR i : mkBody b ++ cs

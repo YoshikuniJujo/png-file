@@ -9,10 +9,12 @@ module File.Binary.PNG.Chunks.Chunks (
 	typeChunk,
 	getName,
 
-	IHDR,
-	PLTE,
-	IDAT(..),
-	IEND(..),
+	IHDR(..), PLTE(..), IDAT(..), IEND(..),
+	TRNS,
+	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
+	ITXT, TEXT(..), ZTXT,
+	BKGD(..), HIST, PHYS, SPLT,
+	TIME,
 
 	mkToBinary,
 	mkFromBinary,

@@ -9,15 +9,13 @@ module File.Binary.PNG.Chunks (
 	getChunks,
 	putChunks,
 
-	IHDR,
-	PLTE,
-	IDAT(..),
-	IEND(..),
-
-	critical,
-	beforePLTE,
-	beforeIDAT,
-	anyPlace
+	IHDR(..), PLTE(..), IDAT(..), IEND(..),
+	TRNS,
+	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
+	ITXT, TEXT(..), ZTXT,
+	BKGD(..), HIST, PHYS, SPLT,
+	TIME
+	
 ) where
 
 import Language.Haskell.TH (
@@ -33,11 +31,10 @@ import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.CRC (crcb, checkCRC)
-import File.Binary.PNG.Chunks.Chunks (
+import File.Binary.PNG.Chunks.Chunks {- (
 	Chunk(..), TypeChunk(..), typeChunk, getName,
 	mkFromBinary, mkToBinary, chunkConsNames, chunkNamePairs,
-	IHDR, PLTE, IDAT(..), IEND(..),
-	critical, beforePLTE, beforeIDAT, anyPlace)
+	IHDR(..), PLTE(..), IDAT(..), IEND(..), beforePLTE, beforeIDAT, anyPlace) -}
 
 --------------------------------------------------------------------------------
 
@@ -48,7 +45,14 @@ getChunks b = do
 	return $ map chunkData $ chunks p
 
 putChunks :: Binary b => [Chunk] -> b
-putChunks = toBinary () . PNG . map createChunk
+putChunks = toBinary () . PNG . map createChunk . sortChunks
+
+filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
+filterChunks ts = filter $ (`elem` ts) . typeChunk
+
+sortChunks :: [Chunk] -> [Chunk]
+sortChunks cs = concatMap (($ cs) . filterChunks)
+	[[T_IHDR], beforePLTE, [T_PLTE], beforeIDAT, [T_IDAT], anyPlace, [T_IEND]]
 
 [binary|
 
