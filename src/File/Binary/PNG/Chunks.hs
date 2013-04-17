@@ -27,7 +27,7 @@ import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import Language.Haskell.TH.Tools
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
-import File.Binary.PNG.Chunks.TH (dataChunk, typeName, instanceFieldChunk)
+import File.Binary.PNG.Chunks.TH (instanceFieldChunk)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
@@ -36,12 +36,12 @@ import File.Binary.PNG.Chunks.Each (
 
 --------------------------------------------------------------------------------
 
-dataChunk chunkNames
-typer ''Chunk "Chunk"
-typeName chunkNames
+wrapTypes "Chunk" chunkNames ("Others", [''ByteString, ''ByteString]) [''Show]
+typer ''Chunk "Chunk" "T_"
+typeName ''TypeChunk chunkNames "T_" ('T_Others, ''ByteString)
 
 bplte, bidat, aplace :: [TypeChunk]
-[bplte, bidat, aplace] = map (map nameToType) [beforePLTE, beforeIDAT, anyPlace]
+[bplte, bidat, aplace] = map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]
 
 instanceFieldChunk chunkNames
 
@@ -61,7 +61,7 @@ createChunk cb = ChunkStructure {
 	chunkData = cb,
 	chunkCRC = CRC }
 	where
-	name = typeToName $ typeChunk cb
+	name = typeChunkToName $ typeChunk cb
 
 filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
 filterChunks ts = filter $ (`elem` ts) . typeChunk
