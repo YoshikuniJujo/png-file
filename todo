@@ -12,15 +12,13 @@
 	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
 	今の PNG は Chunks とかの名前に変えようかな
 	この本来の PNG は Header と Image と Values を持てば良いだろう
-**5. instance Field (Int, Int, Int) はやめる。ちゃんと newtype か何かを使おう
-6. refactoring 必要だ
-7. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
-8. 先に refactoring してから module 名を見直そう
+5. refactoring 必要だ
+6. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
+7. 先に refactoring してから module 名を見直そう
 	Language.Haskell.TH.Tools
 	File.Binary.PNG
-	File.Binary.PNG.CRC
+	File.Binary.PNG.Chunks.CRC
 	File.Binary.PNG.Chunks
-	File.Binary.PNG.Chunks.Data
 	File.Binary.PNG.Chunks.Each
-	File.Binary.PNG.Chunks.Data.TH
-9. Language.Haskell.TH.Tools を File.Binary.PNG.Chunks.Data.TH に吸収させるか考える
+	File.Binary.PNG.Chunks.TH
+8. Language.Haskell.TH.Tools を File.Binary.PNG.Chunks.TH に吸収させるか考える

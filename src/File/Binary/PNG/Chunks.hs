@@ -37,7 +37,7 @@ import File.Binary.PNG.Chunks.Each (
 --------------------------------------------------------------------------------
 
 dataChunk chunkNames
-typer ''Chunk 'Others "Chunk"
+typer ''Chunk "Chunk"
 typeName chunkNames
 
 bplte, bidat, aplace :: [TypeChunk]

@@ -57,7 +57,7 @@ upper = map toUpper
 t1 --> t2 = arrowT `appT` t1 `appT` t2
 
 chunkConstructors :: [String] -> [Name]
-chunkConstructors chunkNames = map (mkName . ("Chunk" ++) . map toUpper) chunkNames
+chunkConstructors = map (mkName . ("Chunk" ++) . map toUpper)
 
 instanceFieldChunk :: [String] -> DecsQ
 instanceFieldChunk chunkNames =

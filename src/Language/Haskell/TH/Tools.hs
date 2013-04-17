@@ -2,42 +2,36 @@
 
 module Language.Haskell.TH.Tools (typer) where
 
-import Language.Haskell.TH
-import Control.Arrow
-import Data.List
-import Data.Maybe
+import Language.Haskell.TH (
+	Name, Info(TyConI), DecsQ, Dec(DataD), Con(NormalC),
+	mkName, newName, nameBase, reify,
+	cxt, sigD, dataD, normalC, funD, clause, normalB,
+	conT, appT, arrowT, conP, varP, wildP, conE, varE, appE)
+import Data.List (isPrefixOf)
+import Control.Monad (replicateM)
+import Control.Arrow (first, (&&&))
 
-typer :: Name -> Name -> String -> DecsQ
-typer con ot remove = do
-	TyConI (DataD _ _ _ s _) <- reify con
-	ovar <- newName "ovar"
-	let	ns = map (\(NormalC n _) -> n) s
-		other = fromJust $ find (\(NormalC n _) -> n == ot) s
-		names = map (mkName . mkTCon remove . nameBase) $
-			filter (/= ot) ns
-		pairs = map ((flip recP [] . mkName &&& conE . mkName .
-				mkTCon remove) . nameBase) $ filter (/= ot) ns
-		otherN = (\(NormalC on _) -> mkName $
-			mkTCon remove $ nameBase on) other
-		otherT = (\(NormalC on oa) -> NormalC
-			(mkName $ mkTCon remove $ nameBase on) [head oa]) other
-		otherP = (\(NormalC on _) -> conP on [varP ovar, wildP]) other
-		cons = map (return . flip NormalC []) names ++ [return otherT]
-		otherClause = clause [otherP]
-			(normalB $ conE otherN `appE` varE ovar) []
-	let tcon = mkName $ "Type" ++ nameBase con
-	sd <- sigD (mkName $ "type" ++ nameBase con) $
-		arrowT `appT` conT con `appT` conT (mkName $ "Type" ++ nameBase con)
-	dd <- dataD (cxt []) tcon [] cons [''Eq, ''Show]
-	fd <- funD (mkName $ "type" ++ nameBase con) $
-		map ( \(p, e) -> clause [p] (normalB e) []) pairs ++
-			[otherClause]
-	return [sd, dd, fd]
+--------------------------------------------------------------------------------
 
-mkTCon :: String -> String -> String
-mkTCon remove = ("T_" ++) . removeStr remove
+typer :: Name -> String -> DecsQ
+typer dat prefix = do
+	TyConI (DataD _ _ _ s _) <- reify dat
+	let	[datN, funN] = map (mkName . (++ nameBase dat)) ["Type", "type"]
+		((ns, tns), as) = first (id &&& map (typeName prefix)) $ unzip $
+			map (\(NormalC n a) -> (n, map return $ init a)) s
+		mkClause n a tn = do
+			t <- replicateM (length a) (newName "typ")
+			flip (clause [conP n (map varP t ++ [wildP])]) [] $
+				normalB $ foldl (\c -> appE c . varE) (conE tn) t
+	dd <- dataD (cxt []) datN [] (zipWith normalC tns as) [''Eq, ''Show]
+	sd <- sigD funN $ arrowT `appT` conT dat `appT` conT datN
+	fd <- funD funN $ zipWith3 mkClause ns as tns
+	return [dd, sd, fd]
 
-removeStr :: String -> String -> String
-removeStr remove str
-	| remove `isPrefixOf` str = drop (length remove) str
+typeName :: String -> Name -> Name
+typeName prefix = mkName . ("T_" ++) . removePrefix prefix . nameBase
+
+removePrefix :: String -> String -> String
+removePrefix prefix str
+	| prefix `isPrefixOf` str = drop (length prefix) str
 	| otherwise = str
