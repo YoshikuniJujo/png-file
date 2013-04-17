@@ -40,7 +40,7 @@ wrapTypes "Chunk" chunkNames ("Others", [''ByteString, ''ByteString]) [''Show]
 makeTypes "TypeChunk" ''Chunk "Chunk" "T_"
 nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
 
-instanceFieldChunk chunkNames
+instanceFieldChunk ''Chunk "Chunk" 'Others
 
 bplte, bidat, aplace :: [TypeChunk]
 [bplte, bidat, aplace] = map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]

@@ -11,42 +11,57 @@ import Control.Applicative ((<$>))
 import Control.Arrow (first)
 import Data.ByteString.Lazy.Char8 (ByteString)
 import File.Binary
+import Data.List
 
 --------------------------------------------------------------------------------
 
 chunkConstructors :: [String] -> [Name]
 chunkConstructors = map (mkName . ("Chunk" ++))
 
-instanceFieldChunk :: [String] -> DecsQ
-instanceFieldChunk chunkNames =
-	(:[]) <$> instanceD (cxt []) (conT ''Field `appT` conT (mkName "Chunk"))
-		[fieldArgument, funFromBinary chunkNames, funToBinary chunkNames]
+instanceFieldChunk :: Name -> String -> Name -> DecsQ
+instanceFieldChunk tname pre other =
+	(:[]) <$> instanceD (cxt []) (conT ''Field `appT` conT tname) [
+		tySynInstD ''FieldArgument [conT tname] [t| (Int, ByteString) |],
+		funFromBinary 'fromBinary tname pre other,
+		funToBinary 'toBinary tname pre other]
 
-fieldArgument :: DecQ
-fieldArgument =
-	tySynInstD ''FieldArgument [conT $ mkName "Chunk"] $ [t| (Int, ByteString) |]
+funFromBinary :: Name -> Name -> String -> Name -> DecQ
+funFromBinary fname tname pre other = do
+	TyConI (DataD _ _ _ s _) <- reify tname
+	typ <- newName "typ"
+	let	cons = filter (/= other) $ map (\(NormalC n _) -> n) s
+		chunkNames = map (removePrefix pre . nameBase) cons
+	funD fname $ zipWith (mkFromBinary fname)
+		(map (litP . stringL) chunkNames ++ [varP typ])
+		(map conE (chunkConstructors chunkNames) ++
+			[conE other `appE` varE typ])
 
-funFromBinary :: [String] -> DecQ
-funFromBinary chunkNames = funD 'fromBinary $ zipWith mkFromBinary
-	(map (litP . stringL) chunkNames ++ [varP $ mkName "name"])
-	(map conE (chunkConstructors chunkNames) ++
-		[conE (mkName "Others") `appE` varE (mkName "name")])
+mkFromBinary :: Name -> PatQ -> ExpQ -> ClauseQ
+mkFromBinary fname typ con = do
+	n <- newName "n"
+	clause [tupP [varP n, typ]]
+		(normalB $ infixApp
+			(varE 'fmap `appE` (varE 'first `appE` con))
+			(varE '(.))
+			(varE fname `appE` varE n))
+		[]
 
-mkFromBinary :: PatQ -> ExpQ -> ClauseQ
-mkFromBinary name con = clause [tupP [varP $ mkName "n", name]]
-	(normalB $ infixApp
-		(varE 'fmap `appE` (varE 'first `appE` con))
-		(varE '(.))
-		(varE 'fromBinary `appE` varE (mkName "n")))
-	[]
+funToBinary :: Name -> Name -> String -> Name -> DecQ
+funToBinary fname tname pre other = do
+	TyConI (DataD _ _ _ s _) <- reify tname
+	let	cons = filter (/= other) $ map (\(NormalC n _) -> n) s
+		chunkNames = map (removePrefix pre . nameBase) cons
+	funD fname $ zipWith (mkToBinary fname)
+		(chunkConstructors chunkNames ++ [other])
+		(replicate (length $ chunkConstructors chunkNames) [] ++ [[wildP]])
 
-funToBinary :: [String] -> DecQ
-funToBinary chunkNames = funD 'toBinary $ zipWith mkToBinary
-	(chunkConstructors chunkNames ++ [mkName "Others"])
-	(replicate (length $ chunkConstructors chunkNames) [] ++ [[wildP]])
+mkToBinary :: Name -> Name -> [PatQ] -> ClauseQ
+mkToBinary fname con w = do
+	[n, dat] <- mapM newName ["n", "dat"]
+	clause [tupP [varP n, wildP], conP con $ w ++ [varP dat]]
+		(normalB $ appsE [varE fname, varE n, varE dat]) []
 
-mkToBinary :: Name -> [PatQ] -> ClauseQ
-mkToBinary con w = clause
-	[tupP [varP $ mkName "n", wildP], conP con $ w ++ [varP $ mkName "c"]]
-	(normalB $ appsE [varE 'toBinary, varE $ mkName "n", varE $ mkName "c"])
-	[]
+removePrefix :: String -> String -> String
+removePrefix prefix str
+	| prefix `isPrefixOf` str = drop (length prefix) str
+	| otherwise = str

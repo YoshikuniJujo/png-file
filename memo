@@ -110,3 +110,13 @@ data Chunk はそれらの chunk 達をひとつにまとめるためだけに�
 とりあえず Binary と [Chunk] の相互変換の部分だけ作るべきだろう。
 
 今、RW.hs としているものを Chunks.hs とする。
+
+2013.04.17 Wed.
+
+fromBinary (n, "SOME") = fmap (first ChunkSOME) . fromBinary n
+fromBinary (n, typ) = fmap (first (Others typ)) . fromBinary n
+
+toBinary (n, _) (ChunkSOME dat) = toBinary n dat
+toBinary (n, _) (Others _ dat) = toBinary n dat
+
+上記の構造を作るのだが、できるだけ一般的な関数を作って、それを使いたい。
