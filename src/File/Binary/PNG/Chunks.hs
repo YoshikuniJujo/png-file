@@ -25,14 +25,25 @@ import Data.ByteString.Lazy (ByteString, append, length)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
+import Language.Haskell.TH.Tools
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
-import File.Binary.PNG.Chunks.Data (
-	Chunk(..), TypeChunk(..), typeChunk, typeToName, instanceFieldChunk,
+import File.Binary.PNG.Chunks.TH (dataChunk, typeName, instanceFieldChunk)
+import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
-	BKGD(..), HIST, PHYS, SPLT, TIME, bplte, bidat, aplace)
+	BKGD(..), HIST, PHYS, SPLT, TIME,
+	chunkNames, beforePLTE, beforeIDAT, anyPlace)
 
 --------------------------------------------------------------------------------
+
+dataChunk chunkNames
+typer ''Chunk 'Others "Chunk"
+typeName chunkNames
+
+bplte, bidat, aplace :: [TypeChunk]
+[bplte, bidat, aplace] = map (map nameToType) [beforePLTE, beforeIDAT, anyPlace]
+
+instanceFieldChunk chunkNames
 
 getChunks :: Binary b => b -> Either String [Chunk]
 getChunks b = do
@@ -84,8 +95,6 @@ ChunkStructure deriving Show
 |]
 
 data CRC = CRC deriving Show
-
-instanceFieldChunk
 
 instance Field CRC where
 	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
