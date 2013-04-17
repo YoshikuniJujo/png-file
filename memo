@@ -120,3 +120,7 @@ toBinary (n, _) (ChunkSOME dat) = toBinary n dat
 toBinary (n, _) (Others _ dat) = toBinary n dat
 
 上記の構造を作るのだが、できるだけ一般的な関数を作って、それを使いたい。
+
+mkFromBinary で Others を特別扱いしないためにはどうすれば良いか。
+mkToBinary で Others を特別扱いしないためには引数の数が多かったらそこを wildP
+にするという実装でいいだろう。
