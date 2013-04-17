@@ -9,14 +9,13 @@ import Language.Haskell.TH {- (
 	conE, varE, appE, litE) -}
 import Control.Applicative ((<$>))
 import Control.Arrow (first)
-import Data.Char (toUpper)
 import Data.ByteString.Lazy.Char8 (ByteString)
 import File.Binary
 
 --------------------------------------------------------------------------------
 
 chunkConstructors :: [String] -> [Name]
-chunkConstructors = map (mkName . ("Chunk" ++) . map toUpper)
+chunkConstructors = map (mkName . ("Chunk" ++))
 
 instanceFieldChunk :: [String] -> DecsQ
 instanceFieldChunk chunkNames =

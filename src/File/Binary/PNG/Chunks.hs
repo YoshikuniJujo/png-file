@@ -37,13 +37,13 @@ import File.Binary.PNG.Chunks.Each (
 --------------------------------------------------------------------------------
 
 wrapTypes "Chunk" chunkNames ("Others", [''ByteString, ''ByteString]) [''Show]
-typer ''Chunk "Chunk" "T_"
-typeName ''TypeChunk chunkNames "T_" ('T_Others, ''ByteString)
+makeTypes "TypeChunk" ''Chunk "Chunk" "T_"
+nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
+
+instanceFieldChunk chunkNames
 
 bplte, bidat, aplace :: [TypeChunk]
 [bplte, bidat, aplace] = map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]
-
-instanceFieldChunk chunkNames
 
 getChunks :: Binary b => b -> Either String [Chunk]
 getChunks b = do

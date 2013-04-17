@@ -22,3 +22,4 @@
 	File.Binary.PNG.Chunks.Each
 	File.Binary.PNG.Chunks.TH
 8. Language.Haskell.TH.Tools を File.Binary.PNG.Chunks.TH に吸収させるか考える
+9. TH をより一般的なものにしていくこと

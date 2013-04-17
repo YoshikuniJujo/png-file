@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Language.Haskell.TH.Tools (wrapTypes, typeName, typer) where
+module Language.Haskell.TH.Tools (wrapTypes, makeTypes, nameTypes) where
 
 import Language.Haskell.TH {- (
 	Name, Info(TyConI), DecsQ, Dec(DataD), Con(NormalC),
@@ -21,13 +21,13 @@ wrapTypes :: String -> [String] -> (String, [Name]) -> [Name] -> DecsQ
 wrapTypes name types other deriv =
 	fmap (: []) $ flip (dataD (cxt []) (mkName name) []) deriv $ map
 		(normalC <$> fst <*> map (strictType notStrict . conT) . snd) $
-			(++ [first mkName other]) $ flip map types $ (. upper) $
-				mkName . (name ++) &&& (: []) . mkName
+			(++ [first mkName other]) $ flip map types $
+				mkName . (name ++) &&& (: []) . mkName . upper
 
-typer :: Name -> String -> String -> DecsQ
-typer dat preold  prenew = do
+makeTypes :: String -> Name -> String -> String -> DecsQ
+makeTypes name dat preold prenew = do
 	TyConI (DataD _ _ _ s _) <- reify dat
-	let	[datN, funN] = map (mkName . (++ nameBase dat)) ["Type", "type"]
+	let	(datN, funN) = mkName &&& mkName . headToLower $ name
 		((ns, tns), as) = first (id &&& map (typeName' preold prenew)) $
 			unzip $ map (\(NormalC n a) -> (n, map return $ init a)) s
 		mkClause n a tn = do
@@ -47,9 +47,12 @@ removePrefix prefix str
 	| prefix `isPrefixOf` str = drop (length prefix) str
 	| otherwise = str
 
-typeName :: Name -> [String] -> String -> (Name, Name) -> DecsQ
-typeName typ chunks pre to = let types = map (mkName . (pre ++) . upper) chunks in
-	(++) <$> nameToType typ chunks types (fst to) <*> typeToName typ types chunks to
+nameTypes :: Name -> String -> Name -> Name -> DecsQ
+nameTypes typ pre to tt = do
+	TyConI (DataD _ _ _ s _) <- reify typ
+	let	types = filter (/= to) $ map (\(NormalC n _) -> n) s
+		cs = map (removePrefix pre . nameBase) types
+	(++) <$> nameToType typ cs types to <*> typeToName typ types cs (to, tt)
 
 nameToType :: Name -> [String] -> [Name] -> Name -> DecsQ
 nameToType typ chunks types tothers = do
