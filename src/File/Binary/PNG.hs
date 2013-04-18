@@ -10,12 +10,15 @@ module File.Binary.PNG (
 ) where
 
 import Prelude hiding (concat)
-import File.Binary.PNG.Chunks
+import Data.List (find)
+import Data.Maybe (fromJust)
+import Data.ByteString.Lazy (ByteString, toChunks, fromChunks, concat)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
-import Data.ByteString.Lazy as BSL (ByteString, toChunks, fromChunks, concat)
-import Data.List (find)
+import File.Binary.PNG.Chunks (
+	Chunk(..), TypeChunk(..), typeChunk, IHDR, PLTE, IDAT(..),
+	getChunks, putChunks)
 
 --------------------------------------------------------------------------------
 
@@ -31,7 +34,7 @@ mkBody = map (ChunkIDAT . IDAT . fromChunks . (: [])) . toChunks .
 	 }
 
 ihdr :: [Chunk] -> IHDR
-ihdr = (\(ChunkIHDR i) -> i) . head . filter ((== T_IHDR) . typeChunk)
+ihdr = (\(ChunkIHDR i) -> i) . fromJust . find ((== T_IHDR) . typeChunk)
 
 plte :: [Chunk] -> Maybe PLTE
 plte c = do

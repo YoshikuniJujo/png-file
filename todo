@@ -14,7 +14,6 @@
 4. refactoring 必要だ
 5. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
 6. 先に refactoring してから module 名を見直そう
-	Language.Haskell.TH.Tools
 	File.Binary.PNG
 	File.Binary.PNG.Chunks.CRC
 	File.Binary.PNG.Chunks.Each
