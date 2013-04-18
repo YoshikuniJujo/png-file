@@ -18,21 +18,25 @@ module File.Binary.PNG.Chunks (
 	
 ) where
 
-import Prelude hiding (length)
 import Control.Monad (unless)
 import Data.Monoid (mempty)
-import Data.ByteString.Lazy (ByteString, append, length)
+import Data.ByteString.Lazy (ByteString, append)
+import qualified Data.ByteString.Lazy as BSL (length)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
 import Language.Haskell.TH.Tools
+import Language.Haskell.TH
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
-import File.Binary.PNG.Chunks.TH (instanceFieldChunk)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
+
+import Data.List (isPrefixOf)
+import Control.Applicative
+import Control.Arrow
 
 --------------------------------------------------------------------------------
 
@@ -40,7 +44,29 @@ wrapTypes "Chunk" chunkNames ("Others", [''ByteString, ''ByteString]) [''Show]
 makeTypes "TypeChunk" ''Chunk "Chunk" "T_"
 nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
 
-instanceFieldChunk ''Chunk "Chunk" 'Others
+let	removePrefix prefix str
+		| prefix `isPrefixOf` str = drop (length prefix) str
+		| otherwise = str
+ in	(:[]) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
+		tySynInstD ''FieldArgument [conT ''Chunk] [t| (Int, ByteString) |],
+		mapTypesFun 'fromBinary ''Chunk $ \con _ -> do
+			[n, typ] <- mapM newName ["n", "typ"]
+			let (t, c) = if nameBase con /= "Others"
+				then (litP $ stringL $ removePrefix "Chunk" $
+					nameBase con, conE con)
+				else (varP typ, conE con `appE` varE typ)
+			flip (clause [tupP [varP n, t]]) [] $ normalB $ infixApp
+				(varE 'fmap `appE` (varE 'first `appE` c))
+				(varE '(.))
+				(varE 'fromBinary `appE` varE n),
+		mapTypesFun 'toBinary ''Chunk $ \con _ -> do
+			[n, dat] <- mapM newName ["n", "dat"]
+			let d = conP con $ if nameBase con /= "Others"
+				then [varP dat] else [wildP, varP dat]
+			flip (clause [tupP [varP n, wildP], d]) [] $ normalB $ appsE
+				[varE 'toBinary, varE n, varE dat]]
+
+-- instanceFieldChunk ''Chunk
 
 bplte, bidat, aplace :: [TypeChunk]
 [bplte, bidat, aplace] = map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]
@@ -56,7 +82,7 @@ putChunks = toBinary () . PNGFile . map createChunk . sortChunks
 
 createChunk :: Chunk -> ChunkStructure
 createChunk cb = ChunkStructure {
-	chunkSize = fromIntegral $ length $ toBinary (undefined, name) cb,
+	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cb,
 	chunkName = name,
 	chunkData = cb,
 	chunkCRC = CRC }

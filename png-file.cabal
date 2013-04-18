@@ -32,7 +32,6 @@ library
     other-modules:
         File.Binary.PNG.Chunks,
         File.Binary.PNG.Chunks.CRC,
-        File.Binary.PNG.Chunks.TH,
         File.Binary.PNG.Chunks.Each,
         Language.Haskell.TH.Tools
     build-depends:

@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Language.Haskell.TH.Tools (wrapTypes, makeTypes, nameTypes) where
+module Language.Haskell.TH.Tools (mapTypesFun, wrapTypes, makeTypes, nameTypes) where
 
 import Language.Haskell.TH {- (
 	Name, Info(TyConI), DecsQ, Dec(DataD), Con(NormalC),
@@ -16,6 +16,13 @@ import Data.Char
 import Data.String
 
 --------------------------------------------------------------------------------
+
+mapTypesFun :: Name -> Name -> (Name -> [Type] -> ClauseQ) -> DecQ
+mapTypesFun fname typ f = do
+	TyConI (DataD _ _ _ s _) <- reify typ
+	let	cons = map (\(NormalC n a) -> (n, map snd a)) s
+	clauses <- mapM (uncurry f) cons
+	return $ FunD fname clauses
 
 wrapTypes :: String -> [String] -> (String, [Name]) -> [Name] -> DecsQ
 wrapTypes name types other deriv =
