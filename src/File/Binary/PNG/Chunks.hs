@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell, QuasiQuotes, TypeFamilies, OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module File.Binary.PNG.Chunks (
 	Chunk(..),
@@ -15,18 +14,23 @@ module File.Binary.PNG.Chunks (
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT,
 	TIME
-	
 ) where
 
+import Control.Applicative ((<$>))
+import Control.Arrow (first)
 import Control.Monad (unless)
 import Data.Monoid (mempty)
+import Data.List (isPrefixOf)
 import Data.ByteString.Lazy (ByteString, append)
 import qualified Data.ByteString.Lazy as BSL (length)
+import Language.Haskell.TH (
+	newName, nameBase, litP, stringL,
+	cxt, instanceD, tySynInstD, clause, normalB,
+	conT, appT, conP, varP, wildP, tupP, conE, varE, appE, appsE, infixApp)
+import Language.Haskell.TH.Tools (wrapTypes, makeTypes, nameTypes, mapTypesFun)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
-import Language.Haskell.TH.Tools
-import Language.Haskell.TH
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
@@ -34,24 +38,22 @@ import File.Binary.PNG.Chunks.Each (
 	BKGD(..), HIST, PHYS, SPLT, TIME,
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
 
-import Data.List (isPrefixOf)
-import Control.Applicative
-import Control.Arrow
 
 --------------------------------------------------------------------------------
 
-wrapTypes "Chunk" chunkNames ("Others", [''ByteString, ''ByteString]) [''Show]
+wrapTypes "Chunk" chunkNames ("ChunkOthers", [''ByteString, ''ByteString]) [''Show]
 makeTypes "TypeChunk" ''Chunk "Chunk" "T_"
 nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
 
-let	removePrefix prefix str
-		| prefix `isPrefixOf` str = drop (length prefix) str
-		| otherwise = str
- in	(:[]) <$> instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
+(:[]) <$> do
+	let	removePrefix prefix str
+			| prefix `isPrefixOf` str = drop (length prefix) str
+			| otherwise = str
+	instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
 		tySynInstD ''FieldArgument [conT ''Chunk] [t| (Int, ByteString) |],
 		mapTypesFun 'fromBinary ''Chunk $ \con _ -> do
 			[n, typ] <- mapM newName ["n", "typ"]
-			let (t, c) = if nameBase con /= "Others"
+			let (t, c) = if con /= 'ChunkOthers
 				then (litP $ stringL $ removePrefix "Chunk" $
 					nameBase con, conE con)
 				else (varP typ, conE con `appE` varE typ)
@@ -61,15 +63,14 @@ let	removePrefix prefix str
 				(varE 'fromBinary `appE` varE n),
 		mapTypesFun 'toBinary ''Chunk $ \con _ -> do
 			[n, dat] <- mapM newName ["n", "dat"]
-			let d = conP con $ if nameBase con /= "Others"
+			let d = conP con $ if con /= 'ChunkOthers
 				then [varP dat] else [wildP, varP dat]
-			flip (clause [tupP [varP n, wildP], d]) [] $ normalB $ appsE
-				[varE 'toBinary, varE n, varE dat]]
-
--- instanceFieldChunk ''Chunk
+			flip (clause [tupP [varP n, wildP], d]) [] $ normalB $
+				appsE [varE 'toBinary, varE n, varE dat]]
 
 bplte, bidat, aplace :: [TypeChunk]
-[bplte, bidat, aplace] = map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]
+[bplte, bidat, aplace] =
+	map (map nameToTypeChunk) [beforePLTE, beforeIDAT, anyPlace]
 
 getChunks :: Binary b => b -> Either String [Chunk]
 getChunks b = do
@@ -81,20 +82,17 @@ putChunks :: Binary b => [Chunk] -> b
 putChunks = toBinary () . PNGFile . map createChunk . sortChunks
 
 createChunk :: Chunk -> ChunkStructure
-createChunk cb = ChunkStructure {
-	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cb,
+createChunk cd = let name = typeChunkToName $ typeChunk cd in ChunkStructure {
+	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cd,
 	chunkName = name,
-	chunkData = cb,
+	chunkData = cd,
 	chunkCRC = CRC }
-	where
-	name = typeChunkToName $ typeChunk cb
-
-filterChunks :: [TypeChunk] -> [Chunk] -> [Chunk]
-filterChunks ts = filter $ (`elem` ts) . typeChunk
 
 sortChunks :: [Chunk] -> [Chunk]
 sortChunks cs = concatMap (($ cs) . filterChunks)
 	[[T_IHDR], bplte, [T_PLTE], bidat, [T_IDAT], aplace, [T_IEND]]
+	where
+	filterChunks ts = filter $ (`elem` ts) . typeChunk
 
 [binary|
 
@@ -124,9 +122,9 @@ data CRC = CRC deriving Show
 
 instance Field CRC where
 	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
-	fromBinary (nam, bod, arg) b = let (bs, rest) = getBytes 4 b in
-		if checkCRC (nam `append` toBinary arg bod) bs
+	fromBinary (name, body, arg) b = let (bs, rest) = getBytes 4 b in
+		if checkCRC (name `append` toBinary arg body) bs
 			then return (CRC, rest)
 			else fail "bad crc"
-	toBinary (nam, bod, arg) _ =
-		makeBinary $ crc $ nam `append` toBinary arg bod
+	toBinary (name, body, arg) _ =
+		makeBinary $ crc $ name `append` toBinary arg body
