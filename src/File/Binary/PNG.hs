@@ -16,6 +16,7 @@ import Data.ByteString.Lazy (ByteString, toChunks, fromChunks, concat)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
+import File.Binary.PNG.Data ()
 import File.Binary.PNG.Chunks (
 	Chunk(..), TypeChunk(..), typeChunk, IHDR, PLTE, IDAT(..),
 	getChunks, putChunks)

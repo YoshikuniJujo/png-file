@@ -13,6 +13,7 @@ module File.Binary.PNG.Chunks.Each (
 
 import Data.Monoid (mconcat)
 import Data.ByteString.Lazy (ByteString)
+import Data.Word (Word8)
 import File.Binary (binary, Field(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
@@ -139,7 +140,7 @@ BKGD deriving Show
 
 arg :: Int
 
-arg: bkgd
+((), Just arg){[Word8]}: bkgd
 
 |]
 

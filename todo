@@ -11,3 +11,8 @@
 	次は、PNG の構造を考えて、PNG <-> [Chunk] を作ろう
 	PNG は Header と Image と Values を持てば良いだろう
 4. Language.Haskell.TH.Tools の名前について考える
+5. 優先度は低いが以下のチャンクもいずれは扱えるようにしよう
+	oFFs, pCAL, sCAL
+	gIFg, gIFt, gIFx, fRAc
+6. arg に、IHDR を入れることで、TRNS と BKGD の読み込みが改良されそうだ。
+	試してみよう。

@@ -132,3 +132,48 @@ nameToType typ = T_Others typ
 
 typeToName T_SOME = "SOME"
 typeToName (T_Others typ) = typ
+
+refactoring がとりあえずおわり、ようやく本来の部分に取りかかることができる。
+data PNG pi = PNG PNGHeader pi PNGValues
+とし、
+class PNGImage pi where
+	.
+	.
+	.
+とし、
+PNGImage pi => ... PNG pi ... といった関数を作る。
+これは、File.Binary.PNG.Data あたりで作ろうかな。
+
+zipper 的な作りにすることを考える。
+up :: pi -> pi
+down :: pi -> pi
+left :: pi -> pi
+right :: pi -> pi
+goto :: Int -> Int -> pi -> pi
+とか、
+set :: pi -> color -> pi
+get :: pi -> color
+とか。
+そして、データそのものを [[Color]] で表現するものと、ByteString で表現するもの
+との両方を作ってみる。
+前者は変換作業をまとめてする形式となり、後者はその都度行う形となる。
+よって、後者は PNGHeader を内蔵する形となるはずだ。
+とすると、前者でも内蔵する形としなければならない。
+
+データに大きな影響を与えるパラメータとして、以下が挙げられるだろう。
+width
+height
+depth
+alpha
+color
+palet
+compressionType は現在は一種類のみなので気にしない
+filterType
+interlaceType
+
+IHDR もわたすようにすれば BKGD の読み込みはより良くなるが、
+そこまでするべきかどうか。
+他の値でそういうものが無ければ今のところは [Word8] として読んでおいて、
+後から解釈するようにしよう。
+TRNS もそうだな。
+試してみてもいいかもしれない。
