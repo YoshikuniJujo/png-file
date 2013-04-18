@@ -8,9 +8,6 @@
 	ということがある
 	あとで考えること
 3. 今のところ、[Chunk] <-> Binary ができるようになった
-	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
-	今の PNG は Chunks とかの名前に変えようかな <- PNGFile に変えた
-	この本来の PNG は Header と Image と Values を持てば良いだろう
-4. 先に refactoring してから module 名を見直そう
-	File.Binary.PNG.Chunks.Each
-5. Language.Haskell.TH.Tools の名前について考える
+	次は、PNG の構造を考えて、PNG <-> [Chunk] を作ろう
+	PNG は Header と Image と Values を持てば良いだろう
+4. Language.Haskell.TH.Tools の名前について考える

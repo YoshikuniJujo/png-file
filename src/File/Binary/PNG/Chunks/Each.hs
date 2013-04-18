@@ -1,13 +1,12 @@
 {-# LANGUAGE QuasiQuotes, TypeFamilies #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 module File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), RGB8(..), IDAT(..), IEND(..),
 	TRNS,
 	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
+	DATA,
 
 	chunkNames, critical, beforePLTE, beforeIDAT, anyPlace
 ) where
@@ -140,7 +139,7 @@ BKGD deriving Show
 
 arg :: Int
 
-1: bkgd
+arg: bkgd
 
 |]
 
