@@ -1,6 +1,5 @@
 1. CRC.hs の代わりに、hackage で使える package があるかどうか調べること
-2. chunk body は (ret, bytestring) のような感じに二重化する -> CRC チェックのため
-3. 上の 2 は結局やめにした。その代わりに、toBinary と fromBinary をしている
+2. fromBinary したものに toBinary をしている
 	これはあまり効率的ではない
 	fromBinary に限れば、binary を引数とすることは可能だが、
 	toBinary に同じ引数を使う仕様となっているため問題がある
@@ -8,16 +7,15 @@
 	ひとつには、fromBinary と toBinary の引数を何らかの方法で変える
 	ということがある
 	あとで考えること
-4. 今のところ、[Chunk] <-> Binary ができるようになった
+3. 今のところ、[Chunk] <-> Binary ができるようになった
 	次は、本来の PNG を考えて、PNG <-> [Chunk] を作ろう
-	今の PNG は Chunks とかの名前に変えようかな
+	今の PNG は Chunks とかの名前に変えようかな <- PNGFile に変えた
 	この本来の PNG は Header と Image と Values を持てば良いだろう
-5. refactoring 必要だ
-6. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
-7. 先に refactoring してから module 名を見直そう
-	File.Binary.PNG.Chunks
+4. refactoring 必要だ
+5. まずは、module 名の見直しが必要。また cabal file に必要な module を足さなくては
+6. 先に refactoring してから module 名を見直そう
 	Language.Haskell.TH.Tools
 	File.Binary.PNG
 	File.Binary.PNG.Chunks.CRC
 	File.Binary.PNG.Chunks.Each
-8. Language.Haskell.TH.Tools の名前について考える
+7. Language.Haskell.TH.Tools の名前について考える

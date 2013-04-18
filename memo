@@ -124,3 +124,11 @@ toBinary (n, _) (Others _ dat) = toBinary n dat
 mkFromBinary で Others を特別扱いしないためにはどうすれば良いか。
 mkToBinary で Others を特別扱いしないためには引数の数が多かったらそこを wildP
 にするという実装でいいだろう。
+
+2013.04.18 Thu.
+
+nameToType "SOME" = T_SOME
+nameToType typ = T_Others typ
+
+typeToName T_SOME = "SOME"
+typeToName (T_Others typ) = typ
