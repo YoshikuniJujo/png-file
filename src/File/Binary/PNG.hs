@@ -3,7 +3,7 @@ module File.Binary.PNG (
 	putChunks,
 
 	mkChunks,
-	ihdr,
+	ihdr, IHDR(..),
 	plte,
 	body,
 	others
@@ -18,7 +18,7 @@ import Codec.Compression.Zlib (
 	bestCompression, WindowBits(..))
 import File.Binary.PNG.Data ()
 import File.Binary.PNG.Chunks (
-	Chunk(..), TypeChunk(..), typeChunk, IHDR, PLTE, IDAT(..),
+	Chunk(..), TypeChunk(..), typeChunk, IHDR(..), PLTE, IDAT(..),
 	getChunks, putChunks)
 
 --------------------------------------------------------------------------------

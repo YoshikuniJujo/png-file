@@ -168,8 +168,8 @@ alpha
 color
 palet
 compressionType は現在は一種類のみなので気にしない
-filterType
-interlaceType
+filterType これは、作られた Image を [Chunk] に変換する時に気にすればいい
+interlaceType これも同上だろう
 
 IHDR もわたすようにすれば BKGD の読み込みはより良くなるが、
 そこまでするべきかどうか。
@@ -177,3 +177,22 @@ IHDR もわたすようにすれば BKGD の読み込みはより良くなるが
 後から解釈するようにしよう。
 TRNS もそうだな。
 試してみてもいいかもしれない。
+
+今のところ PNImage は file の編集にのみ対応している。
+
+file の読み込みについては、もっと順次アクセスを意識するべきだろう。
+とくに interlace について考える必要がある。
+また filter についても読み込みのときには意識する必要があるので難しい。
+[[Color]] 形式のときにはすべて展開してしまうことにする。
+これは編集に向く形式である。
+ByteString 形式のときには Image への入出力のときにいろいろな計算をするようにしよう。
+filter が問題かもしれないが、これは goUp 等の時に基準となる pixel を持っていけば
+できそうだ。
+
+setPixel は grey -> color, palet -> not palet, not alpha -> alpha の変換は
+自動で行うことにする。逆の変換は明示的に行う必要があるだろう。
+
+filter は [[Color]] 形式のときには一気にやってしまえばいい。
+ByteString 形式のときには左、上、左上の pixel を自動で計算するようにしよう。
+
+とりあえず test 目的で viewer を作ってみるか。
