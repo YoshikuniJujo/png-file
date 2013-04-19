@@ -16,3 +16,5 @@
 	gIFg, gIFt, gIFx, fRAc
 6. arg に、IHDR を入れることで、TRNS と BKGD の読み込みが改良されそうだ。
 	試してみよう。
+7. 上記は面倒なので、やめる。またはもっと後でやろう。
+8. binary-file で Word32 の argument を () にするか検討しよう。
