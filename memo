@@ -208,3 +208,43 @@ IHDR と PLTE を渡しちゃえば良さそうだな。
 もちろん重ね合わせには影響してくるだろうけど。
 いや、透過の情報は必要か。
 やはり新しい PNGHeader が必要かもしれない。
+
+2013.04.20 Sat.
+今のところ、cHRM, gAMA, iCCP, sRGB を理解していない。
+gAMA についてはだいたいわかった。
+だいたいわかったかな。
+iCCP の具体的な形式はよくわからない。
+また、sRGB についても完全に理解したわけではない。
+
+いずれにしても PNGHeader には必要なさそうだ。
+
+PNGHeader に必要な情報は、
+IHDR のすべての情報、tRNS の情報だ。
+bKGD が微妙ではあるが、これは別の情報とすることができるだろう。
+
+それ以外の情報としては、cHRM, gAMA, iCCP, sBIT, sRGB, bKGD, hIST, pHYs, sPLT,
+iTXt, tEXt, zTXt, tIME があるが、これらは後で追加すればいいだろう。
+
+pngUseColor, pngUsePalet と pngTrans はまとめてしまおうかな。
+pngColorType としようかな。
+pngDepth も、まとめたほうがいいかもしれない。
+
+color type は
+000
+010
+011
+100
+110
+の5通り。
+00
+01
+01
+10
+11
+
+palet であれば他の値は 0 1 であることが決まる。
+それ以外はすべての組み合わせがある。
+Index { trans :: [Int] } | Grey { trans :: Maybe Int } | GreyAlpha |
+Color { trans :: Maybe (Int, Int, Int) } | ColorAlpha
+
+bit depth はそのままでいいかな。

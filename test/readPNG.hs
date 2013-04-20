@@ -6,6 +6,7 @@ import File.Binary.PNG
 import Prelude hiding (concat)
 import System.Environment (getArgs)
 import File.Binary(readBinaryFile, writeBinaryFile)
+import Data.List
 
 --------------------------------------------------------------------------------
 
@@ -21,6 +22,9 @@ main = do
 		p = plte cs
 		o = others cs
 		b = body cs
+
+	print $ makePNGHeader i $ fmap (\(ChunktRNS t) -> t) $
+		find ((== T_tRNS) . typeChunk) o
 
 	let binary = putChunks $ mkChunks i p o b
 	writeBinaryFile fout binary

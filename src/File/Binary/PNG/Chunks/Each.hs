@@ -6,7 +6,7 @@ module File.Binary.PNG.Chunks.Each (
 	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
-	DATA,
+	DATA(..),
 
 	chunkNames, critical, beforePLTE, beforeIDAT, anyPlace
 ) where

@@ -13,7 +13,8 @@ module File.Binary.PNG.Chunks (
 	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT,
-	TIME
+	TIME,
+	DATA(..)
 ) where
 
 import Control.Applicative ((<$>))
@@ -35,7 +36,7 @@ import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), IDAT(..), IEND(..),
 	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
-	BKGD(..), HIST, PHYS, SPLT, TIME,
+	BKGD(..), HIST, PHYS, SPLT, TIME, DATA(..),
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
 
 
@@ -62,11 +63,11 @@ nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
 				(varE '(.))
 				(varE 'fromBinary `appE` varE n),
 		mapTypesFun 'toBinary ''Chunk $ \con _ -> do
-			[n, dat] <- mapM newName ["n", "dat"]
+			[n, dt] <- mapM newName ["n", "dt"]
 			let d = conP con $ if con /= 'ChunkOthers
-				then [varP dat] else [wildP, varP dat]
+				then [varP dt] else [wildP, varP dt]
 			flip (clause [tupP [varP n, wildP], d]) [] $ normalB $
-				appsE [varE 'toBinary, varE n, varE dat]]
+				appsE [varE 'toBinary, varE n, varE dt]]
 
 bplte, bidat, aplace :: [TypeChunk]
 [bplte, bidat, aplace] =

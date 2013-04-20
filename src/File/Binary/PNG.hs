@@ -6,7 +6,12 @@ module File.Binary.PNG (
 	ihdr, IHDR(..),
 	plte,
 	body,
-	others
+	others,
+
+	TypeChunk(..),
+	typeChunk,
+	Chunk(..),
+	makePNGHeader
 ) where
 
 import Prelude hiding (concat)
@@ -16,10 +21,9 @@ import Data.ByteString.Lazy (ByteString, toChunks, fromChunks, concat)
 import Codec.Compression.Zlib (
 	decompress, compressWith, defaultCompressParams, CompressParams(..),
 	bestCompression, WindowBits(..))
-import File.Binary.PNG.Data ()
-import File.Binary.PNG.Chunks (
+import File.Binary.PNG.DataChunks (
 	Chunk(..), TypeChunk(..), typeChunk, IHDR(..), PLTE, IDAT(..),
-	getChunks, putChunks)
+	getChunks, putChunks, makePNGHeader)
 
 --------------------------------------------------------------------------------
 
