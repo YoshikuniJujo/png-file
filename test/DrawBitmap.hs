@@ -58,8 +58,6 @@ drawBitmap2 image = do
 --			(replicate (fromIntegral w * 3 + 3) 0) dat
 		print . (`diffUTCTime` t0) =<< getCurrentTime
 	loop'' dpy win gc image thread
-	where
---	image = bsToImage w dat -- (replicate (fromIntegral w * 3 + 3) 0) dat
 
 drawBitmap' :: Display -> Window -> GC -> Position -> [[(Word8, Word8, Word8)]] -> IO ()
 drawBitmap' _ _ _ _ [] = return ()
@@ -123,12 +121,6 @@ loop'' dpy win gc image thread = allocaXEvent $ \e -> do
 				t0 <- getCurrentTime
 				print t0
 				drawBitmap' dpy win gc 0 $ image
---					bsToImage w (replicate
---						(fromIntegral w * 3 + 3) 0) dat []
-{-
-				image dpy win gc w 0 0 0 0
-					(replicate (fromIntegral w * 3 + 3) 0) dat
--}
 				print . (`diffUTCTime` t0) =<< getCurrentTime
 			loop'' dpy win gc image thread
 		MotionEvent {} -> do
@@ -180,6 +172,48 @@ drawL dpy win gc filter w x0 y0 x y pre left dat
 			(setpre w pre $ pack color) (Just $ color) $ drop 3 dat
 	| otherwise = return (pre, dat)
 
+paeth :: Int -> Int -> Int -> Int
+paeth a b c = let
+	p = a + b - c
+	pa = abs $ p - a
+	pb = abs $ p - b
+	pc = abs $ p - c in
+	if pa <= pb && pa <= pc then a else
+		if pb <= pc then b else c
+
+getByte4' :: Word8 -> Word8 -> Word8 -> Word8 -> Word8
+getByte4' left up leftup rgb = fromIntegral (paeth (fi left) (fi up) (fi leftup)) + rgb
+	where
+	fi = fromIntegral
+
+getByte4 :: Int -> Int -> Int -> Int -> Int
+getByte4 left up leftup rgb = let
+	x = left + up - leftup
+	a = abs $ x - left
+	b = abs $ x - up
+	c = abs $ x - leftup in
+	if a <= b && a <= c then
+		left + rgb else if b <= c then
+			up + rgb else
+				leftup + rgb
+
+setpre :: Position -> ByteString -> ByteString -> ByteString
+setpre w pre rgb
+	| fromIntegral (length pre) == w * 3 + 3 = drop 3 pre `append` rgb
+	| otherwise = error "bad pre" -- pre `append` rgb
+
+bsToImage w bs = reverse $ map reverse $
+	bsToImage' w (replicate (fromIntegral w * 3 + 3) 0) bs []
+
+bsToImage' :: Position -> ByteString -> ByteString -> [[(Word8, Word8, Word8)]] ->
+	[[(Word8, Word8, Word8)]]
+bsToImage' w pre bs rets
+	| null bs = rets
+	| otherwise = let
+		Just (filter, dat') = uncons bs
+		(pre', ret, dat'') = bsToLine filter w 0 pre Nothing [] dat' in
+		bsToImage' w pre' dat'' (ret : rets)
+
 bsToLine :: Word8 -> Position -> Position -> ByteString ->
 	Maybe (Word8, Word8, Word8) ->
 	[(Word8, Word8, Word8)] -> ByteString ->
@@ -205,11 +239,10 @@ zipWith4 f (x : xs) (y : ys) (z : zs) (w : ws) = f x y z w : zipWith4 f xs ys zs
 getColor 0 left up leftup rgb = rgb
 getColor 1 left up leftup rgb = zipWith (+) left rgb
 getColor 2 left up leftup rgb = zipWith (+) up rgb
-getColor 4 left up leftup rgb = zipWith4 getByte4' left up leftup rgb
+getColor 4 left up leftup rgb = zipWith4 getByte4'' left up leftup rgb
 
-sub :: Word8 -> Word8 -> Word8
-sub x y	| x > y = x - y
-	| otherwise = y - x
+getByte4'' :: Word8 -> Word8 -> Word8 -> Word8 -> Word8
+getByte4'' left up leftup rgb = paeth' left up leftup + rgb
 
 paeth' :: Word8 -> Word8 -> Word8 -> Word8
 paeth' a b c = let
@@ -220,53 +253,6 @@ paeth' a b c = let
 	pc = abs $ p - c' in
 	if pa <= pb && pa <= pc then a else
 		if pb <= pc then b else c
-
-paeth :: Int -> Int -> Int -> Int
-paeth a b c = let
-	p = a + b - c
-	pa = abs $ p - a
-	pb = abs $ p - b
-	pc = abs $ p - c in
-	if pa <= pb && pa <= pc then a else
-		if pb <= pc then b else c
-
-getByte4'' :: Word8 -> Word8 -> Word8 -> Word8 -> Word8
-getByte4'' left up leftup rgb = paeth' left up leftup + rgb
-
-getByte4' :: Word8 -> Word8 -> Word8 -> Word8 -> Word8
-getByte4' left up leftup rgb = fromIntegral (paeth (fi left) (fi up) (fi leftup)) + rgb
-	where
-	fi = fromIntegral
-
-getByte4 :: Int -> Int -> Int -> Int -> Int
-getByte4 left up leftup rgb = let
-	x = left + up - leftup
-	a = abs $ x - left
-	b = abs $ x - up
-	c = abs $ x - leftup in
-	if a <= b && a <= c then
-		left + rgb else if b <= c then
-			up + rgb else
-				leftup + rgb
-
-setpre :: Position -> ByteString -> ByteString -> ByteString
-setpre w pre rgb
-	| fromIntegral (length pre) == w * 3 + 3 = drop 3 pre `append` rgb
-	| otherwise = error "bad pre" -- pre `append` rgb
-
-bsToImage w bs = reverse $ map reverse $
-	bsToImage' w (replicate (fromIntegral w * 3 + 3) 0) bs []
---	image = bsToImage w (replicate (fromIntegral w * 3 + 3) 0) dat
-
--- bsToLine filter w x pre left ret dat
-bsToImage' :: Position -> ByteString -> ByteString -> [[(Word8, Word8, Word8)]] ->
-	[[(Word8, Word8, Word8)]]
-bsToImage' w pre bs rets
-	| null bs = rets
-	| otherwise = let
-		Just (filter, dat') = uncons bs
-		(pre', ret, dat'') = bsToLine filter w 0 pre Nothing [] dat' in
-		bsToImage' w pre' dat'' (ret : rets)
 
 -- image :: Display -> Window -> GC -> Position -> Position -> Position -> ByteString -> IO ()
 image dpy win gc w x0 y0 x y pre dat

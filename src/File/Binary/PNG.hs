@@ -13,7 +13,8 @@ module File.Binary.PNG (
 	Chunk(..),
 	makePNGHeader,
 	bsToPNGImage,
-	PNGImageL(..)
+	PNGImageL(..),
+	PNGImageLColor(..)
 ) where
 
 import Prelude hiding (concat)
@@ -25,7 +26,8 @@ import Codec.Compression.Zlib (
 	bestCompression, WindowBits(..))
 import File.Binary.PNG.DataChunks (
 	Chunk(..), TypeChunk(..), typeChunk, IHDR(..), PLTE, IDAT(..),
-	getChunks, putChunks, makePNGHeader, bsToPNGImage, PNGImageL(..))
+	getChunks, putChunks, makePNGHeader, bsToPNGImage, PNGImageL(..),
+	PNGImageLColor(..))
 
 --------------------------------------------------------------------------------
 

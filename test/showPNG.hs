@@ -8,6 +8,7 @@ import System.Environment (getArgs)
 import File.Binary(readBinaryFile, writeBinaryFile)
 import DrawBitmap
 import qualified Data.ByteString.Lazy as BSL (length)
+import Data.List
 
 --------------------------------------------------------------------------------
 
@@ -26,11 +27,17 @@ main = do
 		o = others cs
 		b = body cs
 
+		trns = fmap (\(ChunktRNS t) -> t) $ find ((== T_tRNS) . typeChunk) o
+		ph = makePNGHeader i trns
+		Right (PNGImageL False [] pi)  = bsToPNGImage i trns b
+		fi = fromIntegral
+		convert (PNGImageLColor r g b 255) = (fi r, fi g, fi b)
 	putStrLn $ take 700 (show b) ++ "..."
 --	putStrLn $ (show b)
 	print $ BSL.length b
 --	drawBitmap w h b
-	drawBitmap2 $ bsToImage w b
+--	drawBitmap2 $ bsToImage w b
+	drawBitmap2 $ map ((map convert) . snd) pi
 
 --	let binary = putChunks $ mkChunks i p o b
 --	writeBinaryFile fout binary

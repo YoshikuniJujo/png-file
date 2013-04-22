@@ -2,7 +2,8 @@ module File.Binary.PNG.DataChunks (
 	module File.Binary.PNG.Chunks,
 	makePNGHeader,
 	bsToPNGImage,
-	PNGImageL(..)
+	PNGImageL(..),
+	PNGImageLColor(..)
 ) where
 
 import File.Binary.PNG.Data
