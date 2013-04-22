@@ -114,14 +114,51 @@ fromPNGImageL pil@(PNGImageL False 8 us ds) = (
 		pngFilterType = 0,
 		pngInterlaceType = 0
 	 },
-	BSL.pack $ concatMap (\(ls, rs) ->
-		0 : concatMap pilColorToWord8 (ls ++ rs)) $ us ++ ds
+	BSL.pack $
+		filterPNGImageL (replicate (w + 1) $ PNGImageLColor 0 0 0 65535)
+			$ map (\(ls, rs) -> ls ++ rs) $ us ++ ds
+--		concatMap (\(ls, rs) ->
+--		0 : concatMap pilColorToWord8 (ls ++ rs)) $ us ++ ds
  )
+	where
+	w = case (us, ds) of
+		((rs, ls) : _, _) -> length rs + length ls
+		(_, (rs, ls) : _) -> length rs + length ls
 
 pilWidth, pilHeight :: PNGImageL -> Int
 pilWidth (PNGImageL False _ ((ls, rs) : _) _) = length ls + length rs
 pilWidth (PNGImageL False _ _ ((ls, rs) : _)) = length ls + length rs
 pilHeight (PNGImageL False _ us ds) = length us + length ds
+
+filterPNGImageL :: [PNGImageLColor] -> [[PNGImageLColor]] -> [Word8]
+filterPNGImageL _ [] = []
+filterPNGImageL pre (l : ls) = 4 :
+	filterLinePNGImageL pre (PNGImageLColor 0 0 0 65535) l ++
+	filterPNGImageL (PNGImageLColor 0 0 0 65535 : l) ls
+
+filterLinePNGImageL :: [PNGImageLColor] -> PNGImageLColor -> [PNGImageLColor] -> [Word8]
+filterLinePNGImageL _ _ [] = []
+filterLinePNGImageL pre left (px : pxs) =
+	pilColorToWord8f 4 pre left px ++
+	filterLinePNGImageL (tail pre) px pxs
+
+pilColorToWord8f ::
+	Int -> [PNGImageLColor] -> PNGImageLColor -> PNGImageLColor -> [Word8]
+pilColorToWord8f 4 pre left px = let
+	PNGImageLColor rlu glu blu 65535 : PNGImageLColor ru gu bu 65535 : _ = pre
+	PNGImageLColor rl gl bl 65535 = left
+	PNGImageLColor rpx gpx bpx 65535 = px in [
+{-
+		fi rpx - ((fi ru + fi rl) `div` 2),
+		fi gpx - ((fi gu + fi gl) `div` 2),
+		fi bpx - ((fi bu + fi bl) `div` 2)
+-}
+		fi rpx - paeth' (fi rl) (fi ru) (fi rlu),
+		fi gpx - paeth' (fi gl) (fi gu) (fi glu),
+		fi bpx - paeth' (fi bl) (fi bu) (fi blu)
+	 ]
+	where
+	fi = fromIntegral . (`shiftR` 8)
 
 pilColorToWord8 :: PNGImageLColor -> [Word8]
 pilColorToWord8 (PNGImageLColor r g b 65535) = [fi r, fi g, fi b]
@@ -190,6 +227,7 @@ zipWith4 f (x : xs) (y : ys) (z : zs) (w : ws) = f x y z w : zipWith4 f xs ys zs
 getColor 0 left up leftup rgb = rgb
 getColor 1 left up leftup rgb = zipWith (+) left rgb
 getColor 2 left up leftup rgb = zipWith (+) up rgb
+getColor 3 left up leftup rgb = zipWith3 (\l u p -> p + (l + u) `div` 2) left up rgb
 getColor 4 left up leftup rgb = zipWith4 getByte4'' left up leftup rgb
 
 getByte4'' :: Word8 -> Word8 -> Word8 -> Word8 -> Word8
