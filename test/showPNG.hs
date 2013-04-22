@@ -29,7 +29,8 @@ main = do
 	putStrLn $ take 700 (show b) ++ "..."
 --	putStrLn $ (show b)
 	print $ BSL.length b
-	drawBitmap w h b
+--	drawBitmap w h b
+	drawBitmap2 $ bsToImage w b
 
 --	let binary = putChunks $ mkChunks i p o b
 --	writeBinaryFile fout binary

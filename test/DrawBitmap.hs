@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings, ScopedTypeVariables #-}
 
-module DrawBitmap (drawBitmap) where
+module DrawBitmap (drawBitmap, bsToImage, drawBitmap2) where
 
 import Prelude hiding (null, take, drop, replicate, cycle, length)
 import Graphics.X11
@@ -46,6 +46,33 @@ drawBitmap w h dat = do
 		print . (`diffUTCTime` t0) =<< getCurrentTime
 	loop' dpy win gc w h dat thread
 
+-- drawBitmap2 :: Position -> Position -> ByteString -> IO ()
+drawBitmap2 image = do
+	(dpy, win, gc) <- openWindow
+--	flush dpy
+	thread <- newChan
+	(writeChan thread =<<) $ forkIO $ do
+		t0 <- getCurrentTime
+		print t0
+--		image dpy win gc w 0 0 0 0
+--			(replicate (fromIntegral w * 3 + 3) 0) dat
+		print . (`diffUTCTime` t0) =<< getCurrentTime
+	loop'' dpy win gc image thread
+	where
+--	image = bsToImage w dat -- (replicate (fromIntegral w * 3 + 3) 0) dat
+
+drawBitmap' :: Display -> Window -> GC -> Position -> [[(Word8, Word8, Word8)]] -> IO ()
+drawBitmap' _ _ _ _ [] = return ()
+drawBitmap' dpy win gc y (l : ls) =
+	drawBitmapLine dpy win gc y 0 l >> drawBitmap' dpy win gc (y + 1) ls
+
+-- drawBitmapLine :: Position -> Position -> [(Word8, Word8, Word8)] -> IO ()
+drawBitmapLine _ _ _ _ _ [] = return ()
+drawBitmapLine dpy win gc y x (c : cs) = do
+	setForeground dpy gc $ rgbToWord32 $ (\(r, g, b) -> [r, g, b]) c
+	drawPoint dpy win gc x y
+	drawBitmapLine dpy win gc y (x + 1) cs
+
 loop' :: Display -> Window -> GC -> Position -> Position -> ByteString -> Chan ThreadId -> IO ()
 loop' dpy win gc w h dat thread = allocaXEvent $ \e -> do
     threadDelay 100000
@@ -74,6 +101,41 @@ loop' dpy win gc w h dat thread = allocaXEvent $ \e -> do
 			loop' dpy win gc w h dat thread
 		_ -> print ev
 	else loop' dpy win gc w h dat thread
+
+-- loop'' :: Display -> Window -> GC -> Position -> Position -> ByteString -> Chan ThreadId -> IO ()
+loop'' dpy win gc image thread = allocaXEvent $ \e -> do
+    threadDelay 100000
+    pend <- pending dpy
+    if (pend > 0) then do
+--	print image
+	nextEvent dpy e
+	ev <- getEvent e
+	case ev of
+		KeyEvent {} -> do
+			ch <- fmap (chr . fromEnum) $ keycodeToKeysym dpy
+				(ev_keycode ev) 0
+			if ch == 'q' then return () else loop'' dpy win gc image thread
+		ExposeEvent {} -> do
+			readChan thread >>= \th -> do
+				killThread th
+				print th
+			(writeChan thread =<<) $ forkIO $ do
+				t0 <- getCurrentTime
+				print t0
+				drawBitmap' dpy win gc 0 $ image
+--					bsToImage w (replicate
+--						(fromIntegral w * 3 + 3) 0) dat []
+{-
+				image dpy win gc w 0 0 0 0
+					(replicate (fromIntegral w * 3 + 3) 0) dat
+-}
+				print . (`diffUTCTime` t0) =<< getCurrentTime
+			loop'' dpy win gc image thread
+		MotionEvent {} -> do
+			return ()
+			loop'' dpy win gc image thread
+		_ -> print ev
+	else loop'' dpy win gc image thread
 
 main :: IO ()
 main = do
@@ -117,6 +179,24 @@ drawL dpy win gc filter w x0 y0 x y pre left dat
 		drawL dpy win gc filter w x0 y0 (x + 1) y
 			(setpre w pre $ pack color) (Just $ color) $ drop 3 dat
 	| otherwise = return (pre, dat)
+
+bsToLine :: Word8 -> Position -> Position -> ByteString ->
+	Maybe (Word8, Word8, Word8) ->
+	[(Word8, Word8, Word8)] -> ByteString ->
+	(ByteString, [(Word8, Word8, Word8)], ByteString)
+bsToLine filter w x pre left ret dat
+	| x < w = let
+		tToL (r, g, b) = [r, g, b]
+		lToT [r, g, b] = (r, g, b)
+		l = fromMaybe (0, 0, 0) left
+		lu = (\[r, g, b] -> (r, g, b)) $
+			maybe [0, 0, 0] (const $ take' 3 pre) left
+		color'@[r, g, b] = getColor filter
+			(tToL l) (take' 3 $ drop 3 pre) (tToL lu) (take' 3 dat)
+		color = (r, g, b) in
+		bsToLine filter w (x + 1) (setpre w pre $ pack color')
+			(Just color) (color : ret) $ drop 3 dat
+	| otherwise = (pre, ret, dat)
 
 zipWith4 :: (a -> b -> c -> d -> e) -> [a] -> [b] -> [c] -> [d] -> [e]
 zipWith4 _ [] [] [] [] = []
@@ -173,6 +253,20 @@ setpre :: Position -> ByteString -> ByteString -> ByteString
 setpre w pre rgb
 	| fromIntegral (length pre) == w * 3 + 3 = drop 3 pre `append` rgb
 	| otherwise = error "bad pre" -- pre `append` rgb
+
+bsToImage w bs = reverse $ map reverse $
+	bsToImage' w (replicate (fromIntegral w * 3 + 3) 0) bs []
+--	image = bsToImage w (replicate (fromIntegral w * 3 + 3) 0) dat
+
+-- bsToLine filter w x pre left ret dat
+bsToImage' :: Position -> ByteString -> ByteString -> [[(Word8, Word8, Word8)]] ->
+	[[(Word8, Word8, Word8)]]
+bsToImage' w pre bs rets
+	| null bs = rets
+	| otherwise = let
+		Just (filter, dat') = uncons bs
+		(pre', ret, dat'') = bsToLine filter w 0 pre Nothing [] dat' in
+		bsToImage' w pre' dat'' (ret : rets)
 
 -- image :: Display -> Window -> GC -> Position -> Position -> Position -> ByteString -> IO ()
 image dpy win gc w x0 y0 x y pre dat
