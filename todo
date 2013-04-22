@@ -19,3 +19,6 @@
 7. 上記は面倒なので、やめる。またはもっと後でやろう。
 8. binary-file で Word32 の argument を () にするか検討しよう。
 9. test viewer の速度の改善
+10. iccp を含む png 画像の入手とその iccp の解凍と中身の check
+11. cHRM と gAMA を使って XYZ 座標へ変換してみる
+12. sRGB についてもっと調べる

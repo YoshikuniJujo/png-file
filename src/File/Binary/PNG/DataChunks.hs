@@ -1,6 +1,8 @@
 module File.Binary.PNG.DataChunks (
 	module File.Binary.PNG.Chunks,
-	makePNGHeader
+	makePNGHeader,
+	bsToPNGImage,
+	PNGImageL(..)
 ) where
 
 import File.Binary.PNG.Data
@@ -8,6 +10,12 @@ import File.Binary.PNG.Chunks
 import Data.Bits
 import qualified Data.ByteString.Lazy as BSL
 import Data.List
+
+bsToPNGImage :: PNGImage pi =>
+	IHDR -> Maybe TRNS -> BSL.ByteString -> Either String pi
+bsToPNGImage ihdr trns bs = do
+	h <- makePNGHeader ihdr trns
+	return $ makePNGImage h bs
 
 makePNGHeader :: IHDR -> Maybe TRNS -> Either String PNGHeader
 makePNGHeader ihdr trns = do
@@ -26,11 +34,11 @@ getTRNSChunk :: [Chunk] -> Maybe Chunk
 getTRNSChunk = find ((== T_tRNS) . typeChunk)
 
 getColorType :: Bool -> Bool -> Bool -> Maybe TRNS -> Either String PNGColorType
-getColorType False True True = return . PNGIndex . maybe [] readTRNSi
-getColorType False False False = return . PNGGrey . fmap readTRNSg
-getColorType False True False = return . PNGColor . fmap readTRNSc
-getColorType True False False = const $ return PNGGreyAlpha
-getColorType True True False = const $ return PNGColorAlpha
+getColorType False True True = return . PNGTypeIndex . maybe [] readTRNSi
+getColorType False False False = return . PNGTypeGrey . fmap readTRNSg
+getColorType False True False = return . PNGTypeColor . fmap readTRNSc
+getColorType True False False = const $ return PNGTypeGreyAlpha
+getColorType True True False = const $ return PNGTypeColorAlpha
 getColorType _ _ _ = fail "bad colortype"
 
 readTRNSi :: TRNS -> [Int]

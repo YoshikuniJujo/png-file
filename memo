@@ -248,3 +248,14 @@ Index { trans :: [Int] } | Grey { trans :: Maybe Int } | GreyAlpha |
 Color { trans :: Maybe (Int, Int, Int) } | ColorAlpha
 
 bit depth はそのままでいいかな。
+
+2013.04.22 Mon.
+
+PNGImageL は [[(Int, Int, Int, Int)]] を利用し、
+toPalet, toGrey, fromAlpha は ByteString への変換時に暗黙のうちに行うようにする。
+そして、class の member 関数としてのそれらは、error として、
+これらが自動で行われるという message を返すことにする。
+toInterlace と fromInterlace は自動で判断できないので、情報として持つ必要がある。
+toPalet, toGrey, fromAlpha は PNGImageBS では必要となるように思ったが、
+これも結局のところは fromPNGImage のときに自動でやればいいので必要ないかもしれない。
+逆の変換は image の編集の際に必要に応じて行うことになるだろう。
