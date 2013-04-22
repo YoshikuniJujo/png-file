@@ -23,7 +23,8 @@ data PNGHeader = PNGHeader {
 	pngColorType :: PNGColorType,
 	pngCompType :: Int,
 	pngFilterType :: Int,
-	pngInterlaceType :: Int
+	pngInterlaceType :: Int,
+	pngPalette :: [(Int, Int, Int)]
  } deriving Show
 
 data PNGColorType
@@ -112,7 +113,8 @@ fromPNGImageL pil@(PNGImageL False 8 us ds) = (
 		pngColorType = PNGTypeColor Nothing,
 		pngCompType = 0,
 		pngFilterType = 0,
-		pngInterlaceType = 0
+		pngInterlaceType = 0,
+		pngPalette = []
 	 },
 	BSL.pack $
 		filterPNGImageL (replicate (w + 1) $ PNGImageLColor 0 0 0 65535)
@@ -176,13 +178,48 @@ makePNGImageL PNGHeader {
 	pngInterlaceType = 0
  } bs = PNGImageL False 8 [] $ map ([] ,) $ bsToImageA w bs
 
+makePNGImageL PNGHeader {
+	pngWidth = w,
+	pngHeight = h,
+	pngDepth = 2,
+	pngColorType = PNGTypeIndex [],
+	pngCompType = 0,
+	pngFilterType = 0,
+	pngInterlaceType = 0,
+	pngPalette = p
+ } bs = PNGImageL False 8 [] $ map ([] ,) $
+	groupN w $ map (intsToPNGImageLColor . (p !!)) $ concatMap toIndexes2 $
+		map BSL.tail $ groupNBS (w `div` 4 + 1) bs
+
+groupN :: Int -> [a] -> [[a]]
+groupN _ [] = []
+groupN n xs = take n xs : groupN n (drop n xs)
+
+groupNBS :: Int -> BSL.ByteString -> [BSL.ByteString]
+groupNBS n_ bs
+	| BSL.null bs = []
+	| otherwise = BSL.take n bs : groupNBS n_ (BSL.drop n bs)
+	where
+	n = fromIntegral n_
+
+intsToPNGImageLColor :: (Int, Int, Int) -> PNGImageLColor
+intsToPNGImageLColor = convert
+
+toIndexes2 :: BSL.ByteString -> [Int]
+toIndexes2 bs = concatMap word2Int2 $ BSL.unpack bs
+
+word2Int2 :: Word8 -> [Int]
+word2Int2 w = map fromIntegral [
+	w `shiftR` 6, (w .&. 0x30) `shiftR` 4,
+	(w .&. 0x0c) `shiftR` 2, w .&. 0x03]
+
 bsToImageA :: Int -> BSL.ByteString -> [[PNGImageLColor]]
 bsToImageA w = map (map convert) . bsToImage w
-	where
-	convert (r, g, b) = PNGImageLColor
-		(toRGB16 r) (toRGB16 g) (toRGB16 b) (255 `shiftL` 8 .|. 255)
 
-toRGB16 :: Word8 -> Int
+convert (r, g, b) = PNGImageLColor
+	(toRGB16 r) (toRGB16 g) (toRGB16 b) (255 `shiftL` 8 .|. 255)
+
+-- toRGB16 :: Word8 -> Int
 toRGB16 w = fromIntegral w `shiftL` 8 .|. fromIntegral w
 
 setpre :: Int -> BSL.ByteString -> BSL.ByteString -> BSL.ByteString

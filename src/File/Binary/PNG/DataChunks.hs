@@ -14,9 +14,9 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.List
 
 bsToPNGImage :: PNGImage pi =>
-	IHDR -> Maybe TRNS -> BSL.ByteString -> Either String pi
-bsToPNGImage ihdr trns bs = do
-	h <- makePNGHeader ihdr trns
+	IHDR -> Maybe PLTE -> Maybe TRNS -> BSL.ByteString -> Either String pi
+bsToPNGImage ihdr plte trns bs = do
+	h <- makePNGHeader ihdr plte trns
 	return $ makePNGImage h bs
 
 pngImageToBS :: PNGImage pi => pi -> (IHDR, Maybe TRNS, BSL.ByteString)
@@ -25,8 +25,8 @@ pngImageToBS pi = let
 	(ihdr, trns) = fromPNGHeader header in
 	(ihdr, trns, bs)
 
-makePNGHeader :: IHDR -> Maybe TRNS -> Either String PNGHeader
-makePNGHeader ihdr trns = do
+makePNGHeader :: IHDR -> Maybe PLTE -> Maybe TRNS -> Either String PNGHeader
+makePNGHeader ihdr plte trns = do
 	ct <- getColorType (alpha ihdr) (color ihdr) (palet ihdr) trns
 	return PNGHeader {
 		pngWidth = width ihdr,
@@ -35,8 +35,14 @@ makePNGHeader ihdr trns = do
 		pngColorType = ct,
 		pngCompType = compressionType ihdr,
 		pngFilterType = filterType ihdr,
-		pngInterlaceType = interlaceType ihdr
+		pngInterlaceType = interlaceType ihdr,
+		pngPalette = maybe [] plteToInts plte
 	 }
+
+plteToInts :: PLTE -> [(Int, Int, Int)]
+plteToInts = map (\(RGB8 r g b) -> (fi r, fi g, fi b)) . colors
+	where
+	fi = fromIntegral
 
 fromPNGHeader :: PNGHeader -> (IHDR, Maybe TRNS)
 fromPNGHeader ph@PNGHeader { pngColorType = PNGTypeColor Nothing } = (IHDR {

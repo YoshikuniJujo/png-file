@@ -29,8 +29,8 @@ main = do
 		b = body cs
 
 		trns = fmap (\(ChunktRNS t) -> t) $ find ((== T_tRNS) . typeChunk) o
-		ph = makePNGHeader i trns
-		Right (PNGImageL False 8 [] pi)  = bsToPNGImage i trns b
+		ph = makePNGHeader i p trns
+		Right (PNGImageL False 8 [] pi)  = bsToPNGImage i p trns b
 		fi = fromIntegral . (`shiftR` 8)
 		convert (PNGImageLColor r g b 65535) = (fi r, fi g, fi b)
 	putStrLn $ take 700 (show b) ++ "..."

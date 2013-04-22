@@ -23,9 +23,9 @@ main = do
 		o = others cs
 		b = body cs
 		trns = fmap (\(ChunktRNS t) -> t) $ find ((== T_tRNS) . typeChunk) o
-		ph = makePNGHeader i trns
+		ph = makePNGHeader i p trns
 		pi :: PNGImageL
-		Right pi = bsToPNGImage i trns b
+		Right pi = bsToPNGImage i p trns b
 
 		(i', Nothing, b') = pngImageToBS pi
 	print ph

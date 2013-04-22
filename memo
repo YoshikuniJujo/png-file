@@ -262,3 +262,5 @@ toPalet, toGrey, fromAlpha は PNGImageBS では必要となるように思っ�
 
 今のところ interlace かどうかだけしか保存していないが、
 sBit も保存する必要があるかもしれない。
+
+palet の情報は PNGHeader にいれる必要があるかもしれない。
