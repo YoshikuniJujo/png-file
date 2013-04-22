@@ -9,6 +9,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Word
 import Data.Int
 import Data.Maybe
+import Data.Bits
 
 data PNG pi = PNG PNGValues [(String, BSL.ByteString)] pi
 
@@ -59,6 +60,7 @@ class PNGColor pc where
 
 data PNGImageL = PNGImageL {
 	pilInterlace :: Bool,
+	pilBits :: Int,
 	pilBackLines :: [([PNGImageLColor], [PNGImageLColor])],
 	pilForwardLines :: [([PNGImageLColor], [PNGImageLColor])]}
 	deriving Show
@@ -67,9 +69,64 @@ data PNGImageLColor = PNGImageLColor Int Int Int Int deriving Show
 
 instance PNGImage PNGImageL where
 	type PNGImageColor PNGImageL = PNGImageLColor
+	type PNGImageError PNGImageL = String
 	makePNGImage = makePNGImageL
+	fromPNGImage = fromPNGImageL
+
+	goUp = pngImageLUp
+	goDown = pngImageLDown
+	goLeft = pngImageLLeft
+	goRight = pngImageLRight
 
 instance PNGColor PNGImageLColor where
+
+pngImageLUp, pngImageLDown, pngImageLLeft, pngImageLRight ::
+	PNGImageL -> Either String PNGImageL
+pngImageLUp (PNGImageL _ _ [] _) = fail "can't go up"
+pngImageLUp (PNGImageL False bits (u : us) ds) =
+	return $ PNGImageL False bits us (u : ds)
+pngImageLDown (PNGImageL _ _ _ []) = fail "can't go down"
+pngImageLDown (PNGImageL False bits us (d : ds)) =
+	return $ PNGImageL False bits (d : us) ds
+pngImageLLeft (PNGImageL False bits us ds) = do
+	us' <- mapM gl us
+	ds' <- mapM gl ds
+	return $ PNGImageL False bits us' ds'
+	where
+	gl ([], _) = fail "can't go left"
+	gl (l : ls, rs) = return (ls, l : rs)
+pngImageLRight (PNGImageL False bits us ds) = do
+	us' <- mapM gr us
+	ds' <- mapM gr ds
+	return $ PNGImageL False bits us' ds'
+	where
+	gr (_, []) = fail "can't go right"
+	gl (ls, r : rs) = return (r : ls, rs)
+
+fromPNGImageL :: PNGImageL -> (PNGHeader, BSL.ByteString)
+fromPNGImageL pil@(PNGImageL False 8 us ds) = (
+	PNGHeader {
+		pngWidth = pilWidth pil,
+		pngHeight = pilHeight pil,
+		pngDepth = 8,
+		pngColorType = PNGTypeColor Nothing,
+		pngCompType = 0,
+		pngFilterType = 0,
+		pngInterlaceType = 0
+	 },
+	BSL.pack $ concatMap (\(ls, rs) ->
+		0 : concatMap pilColorToWord8 (ls ++ rs)) $ us ++ ds
+ )
+
+pilWidth, pilHeight :: PNGImageL -> Int
+pilWidth (PNGImageL False _ ((ls, rs) : _) _) = length ls + length rs
+pilWidth (PNGImageL False _ _ ((ls, rs) : _)) = length ls + length rs
+pilHeight (PNGImageL False _ us ds) = length us + length ds
+
+pilColorToWord8 :: PNGImageLColor -> [Word8]
+pilColorToWord8 (PNGImageLColor r g b 65535) = [fi r, fi g, fi b]
+	where
+	fi = fromIntegral . (`shiftR` 8)
 
 makePNGImageL :: PNGHeader -> BSL.ByteString -> PNGImageL
 makePNGImageL PNGHeader {
@@ -80,13 +137,16 @@ makePNGImageL PNGHeader {
 	pngCompType = 0,
 	pngFilterType = 0,
 	pngInterlaceType = 0
- } bs = PNGImageL False [] $ map ([] ,) $ bsToImageA w bs
+ } bs = PNGImageL False 8 [] $ map ([] ,) $ bsToImageA w bs
 
 bsToImageA :: Int -> BSL.ByteString -> [[PNGImageLColor]]
 bsToImageA w = map (map convert) . bsToImage w
 	where
 	convert (r, g, b) = PNGImageLColor
-		(fromIntegral r) (fromIntegral g) (fromIntegral b) 255
+		(toRGB16 r) (toRGB16 g) (toRGB16 b) (255 `shiftL` 8 .|. 255)
+
+toRGB16 :: Word8 -> Int
+toRGB16 w = fromIntegral w `shiftL` 8 .|. fromIntegral w
 
 setpre :: Int -> BSL.ByteString -> BSL.ByteString -> BSL.ByteString
 setpre w pre rgb

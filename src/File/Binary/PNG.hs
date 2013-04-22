@@ -13,6 +13,7 @@ module File.Binary.PNG (
 	Chunk(..),
 	makePNGHeader,
 	bsToPNGImage,
+	pngImageToBS,
 	PNGImageL(..),
 	PNGImageLColor(..)
 ) where
@@ -27,7 +28,7 @@ import Codec.Compression.Zlib (
 import File.Binary.PNG.DataChunks (
 	Chunk(..), TypeChunk(..), typeChunk, IHDR(..), PLTE, IDAT(..),
 	getChunks, putChunks, makePNGHeader, bsToPNGImage, PNGImageL(..),
-	PNGImageLColor(..))
+	PNGImageLColor(..), pngImageToBS)
 
 --------------------------------------------------------------------------------
 

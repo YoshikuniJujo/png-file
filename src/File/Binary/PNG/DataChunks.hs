@@ -2,6 +2,7 @@ module File.Binary.PNG.DataChunks (
 	module File.Binary.PNG.Chunks,
 	makePNGHeader,
 	bsToPNGImage,
+	pngImageToBS,
 	PNGImageL(..),
 	PNGImageLColor(..)
 ) where
@@ -18,6 +19,12 @@ bsToPNGImage ihdr trns bs = do
 	h <- makePNGHeader ihdr trns
 	return $ makePNGImage h bs
 
+pngImageToBS :: PNGImage pi => pi -> (IHDR, Maybe TRNS, BSL.ByteString)
+pngImageToBS pi = let
+	(header, bs) = fromPNGImage pi
+	(ihdr, trns) = fromPNGHeader header in
+	(ihdr, trns, bs)
+
 makePNGHeader :: IHDR -> Maybe TRNS -> Either String PNGHeader
 makePNGHeader ihdr trns = do
 	ct <- getColorType (alpha ihdr) (color ihdr) (palet ihdr) trns
@@ -31,6 +38,17 @@ makePNGHeader ihdr trns = do
 		pngInterlaceType = interlaceType ihdr
 	 }
 
+fromPNGHeader :: PNGHeader -> (IHDR, Maybe TRNS)
+fromPNGHeader ph@PNGHeader { pngColorType = PNGTypeColor Nothing } = (IHDR {
+	width = pngWidth ph,
+	height = pngHeight ph,
+	depth = pngDepth ph,
+	alpha = False,
+	color = True,
+	palet = False,
+	compressionType = 0,
+	filterType = 0,
+	interlaceType = 0 }, Nothing)
 getTRNSChunk :: [Chunk] -> Maybe Chunk
 getTRNSChunk = find ((== T_tRNS) . typeChunk)
 

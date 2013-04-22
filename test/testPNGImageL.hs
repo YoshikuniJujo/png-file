@@ -26,8 +26,11 @@ main = do
 		ph = makePNGHeader i trns
 		pi :: PNGImageL
 		Right pi = bsToPNGImage i trns b
-	print ph
-	print pi
 
-	let binary = putChunks $ mkChunks i p o b
-	writeBinaryFile fout binary
+		(i', Nothing, b') = pngImageToBS pi
+	print ph
+	putStrLn $ take 700 (show pi) ++ "..."
+
+--	let	binary = putChunks $ mkChunks i p o b
+	let	binary' = putChunks $ mkChunks i' p o b'
+	writeBinaryFile fout binary'
