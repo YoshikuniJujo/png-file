@@ -264,3 +264,6 @@ toPalet, toGrey, fromAlpha は PNGImageBS では必要となるように思っ�
 sBit も保存する必要があるかもしれない。
 
 palet の情報は PNGHeader にいれる必要があるかもしれない。
+
+binary-file を変える必要がある。
+つまり、ある条件まで take するというメンバー関数が必要だ。

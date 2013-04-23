@@ -4,7 +4,8 @@ module File.Binary.PNG.DataChunks (
 	bsToPNGImage,
 	pngImageToBS,
 	PNGImageL(..),
-	PNGImageLColor(..)
+	PNGImageLColor(..),
+	readIccp
 ) where
 
 import File.Binary.PNG.Data

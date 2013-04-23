@@ -1,8 +1,13 @@
-{-# LANGUAGE TypeFamilies, FlexibleContexts, ScopedTypeVariables, TupleSections #-}
+{-# LANGUAGE
+	TypeFamilies,
+	FlexibleContexts,
+	ScopedTypeVariables,
+	TupleSections,
+	OverloadedStrings #-}
 
 module File.Binary.PNG.Data (
 	PNG(..), PNGImage(..), PNGColorType(..), PNGHeader(..),
-	PNGImageL(..), PNGImageLColor(..)
+	PNGImageL(..), PNGImageLColor(..), readIccp,
 ) where
 
 import qualified Data.ByteString.Lazy as BSL
@@ -10,10 +15,24 @@ import Data.Word
 import Data.Int
 import Data.Maybe
 import Data.Bits
+import Codec.Compression.Zlib
 
 data PNG pi = PNG PNGValues [(String, BSL.ByteString)] pi
 
 data PNGValues = PNGValues {
+	pngChrm :: PNGChrm,
+	pngGama :: Int,
+	pngIccp :: (String, BSL.ByteString)
+ }
+
+readIccp :: BSL.ByteString -> BSL.ByteString
+readIccp = decompress
+
+data PNGChrm = PNGChrm {
+	pngChrmWhite :: (Int, Int),
+	pngChrmRed :: (Int, Int),
+	pngChrmGreen :: (Int, Int),
+	pngChrmBlue :: (Int, Int)
  }
 
 data PNGHeader = PNGHeader {

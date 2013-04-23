@@ -10,7 +10,7 @@ module File.Binary.PNG.Chunks (
 
 	IHDR(..), PLTE(..), RGB8(..), IDAT(..), IEND(..),
 	TRNS,
-	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
+	CHRM(..), GAMA(..), ICCP(..), SBIT, SRGB(..),
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT,
 	TIME,
@@ -35,7 +35,7 @@ import File.Binary.Instances.BigEndian ()
 import File.Binary.PNG.Chunks.CRC (crc, checkCRC)
 import File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), RGB8(..), IDAT(..), IEND(..),
-	TRNS, CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
+	TRNS, CHRM(..), GAMA(..), ICCP(..), SBIT, SRGB(..), ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME, DATA(..),
 	chunkNames, beforePLTE, beforeIDAT, anyPlace)
 

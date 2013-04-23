@@ -1,9 +1,9 @@
-{-# LANGUAGE QuasiQuotes, TypeFamilies #-}
+{-# LANGUAGE QuasiQuotes, TypeFamilies, OverloadedStrings #-}
 
 module File.Binary.PNG.Chunks.Each (
 	IHDR(..), PLTE(..), RGB8(..), IDAT(..), IEND(..),
 	TRNS,
-	CHRM(..), GAMA(..), ICCP, SBIT, SRGB(..),
+	CHRM(..), GAMA(..), ICCP(..), SBIT, SRGB(..),
 	ITXT, TEXT(..), ZTXT,
 	BKGD(..), HIST, PHYS, SPLT, TIME,
 	DATA(..),
@@ -12,10 +12,11 @@ module File.Binary.PNG.Chunks.Each (
 ) where
 
 import Data.Monoid (mconcat)
-import Data.ByteString.Lazy (ByteString)
-import File.Binary (binary, Field(..))
+import Data.ByteString.Lazy (ByteString, append)
+import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
+import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 --------------------------------------------------------------------------------
 
@@ -27,7 +28,7 @@ beforeIDAT = ["pHYs", "sPLT"]
 anyPlace = ["tIME", "iTXt", "tEXt", "zTXt"]
 
 type TRNS = DATA
-type ICCP = DATA
+-- type ICCP = DATA
 type SBIT = DATA
 type ITXT = DATA
 type ZTXT = DATA
@@ -112,6 +113,27 @@ arg :: Int
 4: gamma
 
 |]
+
+[binary|
+
+ICCP deriving Show
+
+arg :: Int
+
+{NullString}: iccp_name
+1: iccp_con
+(arg - length (nullString iccp_name) - 2){ByteString}: iccp_body
+
+|]
+
+data NullString = NullString { nullString :: String } deriving Show
+
+instance Field NullString where
+	type FieldArgument NullString = ()
+	toBinary () (NullString str) = makeBinary $ BSLC.pack str `append` "\NUL"
+	fromBinary () bin = do
+		let (ret, rest) = spanBytes (/= 0) bin
+		return (NullString $ BSLC.unpack ret, snd $ unconsByte rest)
 
 [binary|
 
