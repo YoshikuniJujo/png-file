@@ -23,10 +23,10 @@ main = do
 		o = others cs
 		b = body cs
 
-	print $ makePNGHeader i $ fmap (\(ChunktRNS t) -> t) $
-		find ((== T_tRNS) . typeChunk) o
+	print $ makePNGHeader i p $ fmap (\(ChunktRNS t) -> t)
+		(find ((== T_tRNS) . typeChunk) o)
 
-	let binary = putChunks $ mkChunks i p o b
+	let Right binary = putChunks $ mkChunks i p o b
 	writeBinaryFile fout binary
 
 {-

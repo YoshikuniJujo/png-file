@@ -3,7 +3,8 @@
 	FlexibleContexts,
 	ScopedTypeVariables,
 	TupleSections,
-	OverloadedStrings #-}
+	OverloadedStrings,
+	PackageImports #-}
 
 module File.Binary.PNG.Data (
 	PNG(..), PNGImage(..), PNGColorType(..), PNGHeader(..),
@@ -16,6 +17,7 @@ import Data.Int
 import Data.Maybe
 import Data.Bits
 import Codec.Compression.Zlib
+import "monads-tf" Control.Monad.Error
 
 data PNG pi = PNG PNGValues [(String, BSL.ByteString)] pi
 

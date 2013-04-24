@@ -74,8 +74,11 @@ data RGB8 = RGB8 { red :: Int, green :: Int, blue :: Int } deriving Show
 
 instance Field RGB8 where
 	type FieldArgument RGB8 = ()
-	toBinary () RGB8{ red = r, green = g, blue = b } =
-		mconcat [toBinary 1 r, toBinary 1 g, toBinary 1 b]
+	toBinary () RGB8{ red = r, green = g, blue = b } = do
+		r' <- toBinary 1 r
+		g' <- toBinary 1 g
+		b' <- toBinary 1 b
+		return $ mconcat [r', g', b']
 	fromBinary () bin = do
 		(r, bin') <- fromBinary 1 bin
 		(g, bin'') <- fromBinary 1 bin'
@@ -130,7 +133,8 @@ data NullString = NullString { nullString :: String } deriving Show
 
 instance Field NullString where
 	type FieldArgument NullString = ()
-	toBinary () (NullString str) = makeBinary $ BSLC.pack str `append` "\NUL"
+	toBinary () (NullString str) =
+		return $ makeBinary $ (`append` "\NUL") $ BSLC.pack str
 	fromBinary () bin = do
 		let (ret, rest) = spanBytes (/= 0) bin
 		return (NullString $ BSLC.unpack ret, snd $ unconsByte rest)

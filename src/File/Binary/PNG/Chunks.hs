@@ -79,15 +79,20 @@ getChunks b = do
 	unless (rest == mempty) $ fail "couldn't read whole binary"
 	return $ map chunkData $ chunks p
 
-putChunks :: Binary b => [Chunk] -> b
-putChunks = toBinary () . PNGFile . map createChunk . sortChunks
+putChunks :: Binary b => [Chunk] -> Either String b
+putChunks cs = do
+	ret <- mapM createChunk $ sortChunks cs
+	toBinary () $ PNGFile $ ret
 
-createChunk :: Chunk -> ChunkStructure
-createChunk cd = let name = typeChunkToName $ typeChunk cd in ChunkStructure {
-	chunkSize = fromIntegral $ BSL.length $ toBinary (undefined, name) cd,
-	chunkName = name,
-	chunkData = cd,
-	chunkCRC = CRC }
+createChunk :: Chunk -> Either String ChunkStructure
+createChunk cd = do
+	let name = typeChunkToName $ typeChunk cd
+	ret <- toBinary (undefined, name)  cd
+	return $ ChunkStructure {
+		chunkSize = fromIntegral $ BSL.length ret,
+		chunkName = name,
+		chunkData = cd,
+		chunkCRC = CRC }
 
 sortChunks :: [Chunk] -> [Chunk]
 sortChunks cs = concatMap (($ cs) . filterChunks)
@@ -123,9 +128,12 @@ data CRC = CRC deriving Show
 
 instance Field CRC where
 	type FieldArgument CRC = (ByteString, Chunk, (Int, ByteString))
-	fromBinary (name, body, arg) b = let (bs, rest) = getBytes 4 b in
-		if checkCRC (name `append` toBinary arg body) bs
+	fromBinary (name, body, arg) b = do
+		let (bs, rest) = getBytes 4 b
+		ret <- toBinary arg body
+		if checkCRC (name `append` ret) bs
 			then return (CRC, rest)
 			else fail "bad crc"
-	toBinary (name, body, arg) _ =
-		makeBinary $ crc $ name `append` toBinary arg body
+	toBinary (name, body, arg) _ = do
+		ret <- toBinary arg body
+		return $ makeBinary $ crc $ name `append` ret

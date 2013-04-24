@@ -37,5 +37,5 @@ library
         Language.Haskell.TH.Tools
     build-depends:
         base > 3 && < 5, binary-file, bytestring, zlib, array,
-        template-haskell
+        template-haskell, monads-tf
     ghc-options:	-Wall

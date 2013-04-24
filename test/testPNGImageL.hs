@@ -37,5 +37,5 @@ main = do
 	putStrLn $ take 700 (show pi) ++ "..."
 
 --	let	binary = putChunks $ mkChunks i p o b
-	let	binary' = putChunks $ mkChunks i' p o b'
+	let	Right binary' = putChunks $ mkChunks i' p o b'
 	writeBinaryFile fout binary'
