@@ -13,13 +13,7 @@ main = do
 	let Right (ret, _) = fromBinary () cnt :: Either String (ICCP, String)
 	print ret
 	print $ map tag_signature $ tags ret
---	print $ map (($ cnt) . getXYZ) $ take 4 $ tags ret
 	print $ map (($ cnt) . getElement) $ take 17 $ tags ret
-
-getXYZ :: Tag -> String -> (ThreeColors, Int, Int, Int)
-getXYZ t str = let
-	Right (ElementXYZ c (XYZ _ _ x y z), _) = fromBinary t str in
-	(c, x, y, z)
 
 getElement :: Tag -> String -> Element
 getElement t str = let Right (e, _) = fromBinary t str in e
@@ -72,36 +66,16 @@ Tag deriving Show
 data ThreeColors = Red | Green | Blue | White deriving Show
 
 data Element
-	= ElementXYZ ThreeColors XYZ
-	| ElementCHAD CHAD
-	| ElementCurv ThreeColors Curv
-	| ElementPara ThreeColors Para
+	= ElementPara ThreeColors Para
 	| ElementVCGT VCGT
 	| ElementNDIN NDIN
 	| ElementMLUC MLUC
 	| ElementMMOD MMOD
-	| ElementText Text
-	| ElementData String Data
+	| EData String Data
 	deriving Show
 
 instance Field Element where
 	type FieldArgument Element = Tag
-	fromBinary (Tag "rXYZ" offset size) =
-		fmap (first $ ElementXYZ Red) . fromBinary (offset, size)
-	fromBinary (Tag "gXYZ" offset size) =
-		fmap (first $ ElementXYZ Green) . fromBinary (offset, size)
-	fromBinary (Tag "bXYZ" offset size) =
-		fmap (first $ ElementXYZ Blue) . fromBinary (offset, size)
-	fromBinary (Tag "wtpt" offset size) =
-		fmap (first $ ElementXYZ White) . fromBinary (offset, size)
-	fromBinary (Tag "chad" offset size) =
-		fmap (first ElementCHAD) . fromBinary (offset, size)
-	fromBinary (Tag "rTRC" offset size) =
-		fmap (first $ ElementCurv Red) . fromBinary (offset, size)
-	fromBinary (Tag "gTRC" offset size) =
-		fmap (first $ ElementCurv Green) . fromBinary (offset, size)
-	fromBinary (Tag "bTRC" offset size) =
-		fmap (first $ ElementCurv Blue) . fromBinary (offset, size)
 	fromBinary (Tag "aarg" offset size) =
 		fmap (first $ ElementPara Red) . fromBinary (offset, size)
 	fromBinary (Tag "aagg" offset size) =
@@ -116,10 +90,12 @@ instance Field Element where
 		fmap (first $ ElementMLUC) . fromBinary (offset, size)
 	fromBinary (Tag "mmod" offset size) =
 		fmap (first $ ElementMMOD) . fromBinary (offset, size)
+{-
 	fromBinary (Tag "cprt" offset size) =
 		fmap (first $ ElementText) . fromBinary (offset, size)
+-}
 	fromBinary (Tag tn offset size) =
-		fmap (first $ ElementData tn) . fromBinary (offset, size)
+		fmap (first $ EData tn) . fromBinary (offset, size)
 
 [binary|
 
@@ -130,16 +106,16 @@ arg :: (Int, Int)
 ((), Just (fst arg)){String}: pre_XYZ
 ((), Just 4){String}: type_XYZ
 4: 0
-4: xyz_X
-4: xyz_Y
-4: xyz_Z
+4: xyz_X_
+4: xyz_Y_
+4: xyz_Z_
 
 |]
 
 instance Show XYZ where
 	show xyz = "(XYZ " ++ show (type_XYZ xyz) ++ " " ++
-		show (xyz_X xyz) ++ " " ++ show (xyz_Y xyz) ++ " " ++
-		show (xyz_Y xyz) ++ ")"
+		show (xyz_X_ xyz) ++ " " ++ show (xyz_Y_ xyz) ++ " " ++
+		show (xyz_Y_ xyz) ++ ")"
 
 [binary|
 
@@ -354,9 +330,106 @@ Data
 arg :: (Int, Int)
 
 ((), Just (fst arg)){String}: pre_Data
-((), Just (snd arg)){String}: body_Data
+((), Just 4){String}: data_type
+(data_type, snd arg - 4){Elem}: data_body
+-- ((), Just (snd arg - 4)){String}: body_Data
 
 |]
 
 instance Show Data where
-	show dat = "(Data " ++ show (body_Data dat) ++ ")"
+	show dat = "(" ++ show (data_body dat) ++ ")"
+{-
+	show dat = "(Data " ++
+		show (data_type dat) ++ " " ++
+		"(" ++ show (data_body dat) ++ "))"
+-}
+
+data Elem
+	= ElemText Text2
+	| ElemXYZ XYZ2
+	| ElemDesc Desc
+	| ElemCurv Curv2
+	| ElemChad CHAD2
+	| ElemData String String
+	deriving Show
+
+instance Field Elem where
+	type FieldArgument Elem = (String, Int)
+	fromBinary ("XYZ ", size) =
+		fmap (first $ ElemXYZ) . fromBinary size
+	fromBinary ("curv", size) =
+		fmap (first $ ElemCurv) . fromBinary size
+	fromBinary ("sf32", size) =
+		fmap (first $ ElemChad) . fromBinary size
+	fromBinary ("text", size) =
+		fmap (first $ ElemText) . fromBinary size
+	fromBinary ("desc", size) =
+		fmap (first $ ElemText) . fromBinary size
+	fromBinary (typ, size) =
+		fmap (first $ ElemData typ) . fromBinary ((), Just size)
+
+[binary|
+
+Text2
+
+arg :: Int
+
+4: 0
+((), Just (arg - 4)){String}: text
+
+|]
+
+instance Show Text2 where
+	show = const "" -- text
+
+[binary|
+
+XYZ2 deriving Show
+
+arg :: Int
+
+4: 0
+4: xyz_X
+4: xyz_Y
+4: xyz_Z
+
+|]
+
+[binary|
+
+Desc deriving Show
+
+arg :: Int
+
+|]
+
+[binary|
+
+Curv2 deriving Show
+
+arg :: Int
+
+4: 0
+4: num_curv
+(2, Just num_curv){[Int]}: body_curv
+
+|]
+
+[binary|
+
+CHAD2 deriving Show
+
+arg :: Int
+
+4: 0
+4: chad2_a0
+4: chad2_a1
+4: chad2_a2
+4: chad2_a3
+4: chad2_a4
+4: chad2_a5
+4: chad2_a6
+4: chad2_a7
+4: chad2_a8
+
+|]
