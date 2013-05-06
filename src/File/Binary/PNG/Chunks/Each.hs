@@ -16,6 +16,7 @@ import Data.ByteString.Lazy (ByteString, append)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
 import File.Binary.Instances.BigEndian ()
+import File.Binary.Instances.MSB0 ()
 import qualified Data.ByteString.Lazy.Char8 as BSLC
 
 --------------------------------------------------------------------------------
