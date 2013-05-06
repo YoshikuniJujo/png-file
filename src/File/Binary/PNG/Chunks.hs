@@ -109,7 +109,7 @@ PNGFile deriving Show
 2: "\r\n"
 1: "\SUB"
 1: "\n"
-((), Nothing){[ChunkStructure]}: chunks
+repeat (){[ChunkStructure]}: chunks
 
 |]
 

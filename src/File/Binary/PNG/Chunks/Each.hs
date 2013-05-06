@@ -67,7 +67,7 @@ PLTE deriving Show
 
 arg :: Int
 
-((), Just (arg `div` 3)){[RGB8]}: colors
+replicate (arg `div` 3) (){[RGB8]}: colors
 
 |]
 
@@ -104,7 +104,7 @@ CHRM deriving Show
 
 arg :: Int
 
-(4, Just (arg `div` 4)){[Int]}: chrms
+replicate (arg `div` 4) 4{[Int]}: chrms
 
 |]
 
@@ -156,7 +156,7 @@ TEXT deriving Show
 
 arg :: Int
 
-((), Just arg){String}: text
+replicate arg (){String}: text
 
 |]
 
