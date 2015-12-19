@@ -27,7 +27,8 @@ import qualified Data.ByteString.Lazy as BSL (length)
 import Language.Haskell.TH (
 	newName, nameBase, litP, stringL,
 	cxt, instanceD, tySynInstD, clause, normalB,
-	conT, appT, conP, varP, wildP, tupP, conE, varE, appE, appsE, infixApp)
+	conT, appT, conP, varP, wildP, tupP, conE, varE, appE, appsE, infixApp,
+	tySynEqn)
 import Language.Haskell.TH.Tools (wrapTypes, makeTypes, nameTypes, mapTypesFun)
 import File.Binary (binary, Field(..), Binary(..))
 import File.Binary.Instances ()
@@ -51,7 +52,8 @@ nameTypes ''TypeChunk "T_" 'T_Others ''ByteString
 			| prefix `isPrefixOf` str = drop (length prefix) str
 			| otherwise = str
 	instanceD (cxt []) (conT ''Field `appT` conT ''Chunk) [
-		tySynInstD ''FieldArgument [conT ''Chunk] [t| (Int, ByteString) |],
+		tySynInstD ''FieldArgument $
+			tySynEqn [conT ''Chunk] [t| (Int, ByteString) |],
 		mapTypesFun 'fromBinary ''Chunk $ \con _ -> do
 			[n, typ] <- mapM newName ["n", "typ"]
 			let (t, c) = if con /= 'ChunkOthers
