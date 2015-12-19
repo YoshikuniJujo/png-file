@@ -5,7 +5,7 @@ module File.Binary.PNG (
 	mkChunks,
 	ihdr, IHDR(..),
 	plte,
-	body,
+	body, IDAT(..),
 	others,
 	ICCP(..),
 
